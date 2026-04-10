@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Masters 2026 Bet Tracker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;color:#e8e8e0;min-height:100vh;padding:20px}
+.wrap{max-width:940px;margin:0 auto}
+h1{font-size:22px;font-weight:600;letter-spacing:-.3px;color:#f0ece0;margin-bottom:4px}
+.sub{font-size:13px;color:#555;margin-bottom:18px}
+.bar{display:flex;justify-content:space-between;align-items:center;background:#111;border:1px solid #1e1e1e;border-radius:10px;padding:10px 16px;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+.status{font-size:12px;color:#666;flex:1}
+.status b{color:#d0cfc0;font-weight:500}
+.btn{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:#1a3a1c;color:#6fcf74;letter-spacing:.3px;transition:opacity .15s}
+.btn:hover{opacity:.8}.btn:disabled{opacity:.35;cursor:not-allowed}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.mc{background:#111;border:1px solid #1e1e1e;border-radius:10px;padding:14px}
+.ml{font-size:10px;color:#444;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.mv{font-size:22px;font-weight:600;color:#f0ece0}
+.ms{font-size:11px;color:#3a3a3a;margin-top:2px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px;background:#0d0d0d;border:1px solid #1a1a1a;padding:5px;border-radius:10px;width:fit-content}
+.tab{padding:6px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:#444;transition:all .15s}
+.tab.on{background:#1e1e1e;color:#e8e8e0;border:1px solid #2a2a2a}
+.pnl{display:none}.pnl.on{display:block}
+.sh{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#3a3a3a;padding:16px 0 8px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:5px 8px;font-size:10px;font-weight:500;color:#3a3a3a;border-bottom:1px solid #181818;letter-spacing:.05em}
+td{padding:9px 8px;border-bottom:1px solid #161616;vertical-align:middle;font-size:12px;color:#aaa}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#0d0d0d}
+.nm{font-weight:600;font-size:13px;color:#e8e8e0}
+.nt{font-size:10px;color:#3a3a3a;margin-top:2px}
+.b{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.04em;white-space:nowrap}
+.bs{background:#0d2e10;color:#5cb85c;border:1px solid #1a4020}
+.bw{background:#2a2000;color:#d4a520;border:1px solid #3a2e00}
+.bd{background:#2a0d0d;color:#e06060;border:1px solid #3a1515}
+.bi{background:#0d1e2a;color:#5aabdc;border:1px solid #0d2a3a}
+.bp{background:#1a0d2a;color:#a78bfa;border:1px solid #2a1a40}
+.pay{color:#5cb85c;font-weight:600}
+.sg{color:#5cb85c;font-weight:600}
+.se{color:#666}
+.sw{color:#d4a520;font-weight:500}
+.sd{color:#e06060;font-weight:600}
+.dnote{background:#1a0808;border:1px solid #3a1515;color:#e06060;padding:10px 14px;border-radius:8px;font-size:12px;margin:6px 0 12px;line-height:1.6}
+.wnote{background:#181200;border:1px solid #3a2e00;color:#d4a520;padding:10px 14px;border-radius:8px;font-size:12px;margin:6px 0 12px;line-height:1.6}
+
+/* ── RR SPECIFIC ─────────────────────────────── */
+.rr-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0 14px}
+.rrs{background:#111;border:1px solid #1e1e1e;border-radius:9px;padding:12px 14px;text-align:center}
+.rrs-lbl{font-size:10px;color:#444;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.rrs-val{font-size:18px;font-weight:600;color:#e8e8e0}
+.rrs-val.green{color:#5cb85c}
+.rrs-val.amber{color:#d4a520}
+.rrs-val.red{color:#e06060}
+
+.rr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:6px}
+.rrc{background:#111;border:1px solid #1e1e1e;border-radius:10px;overflow:hidden;transition:border-color .15s}
+.rrc.won{border-color:#1a4020}
+.rrc.lost{border-color:#3a1515}
+.rrc-head{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #181818;background:#0e0e0e}
+.rrc-title{font-size:11px;color:#444;font-weight:500;letter-spacing:.05em}
+.rrc-odds{font-size:11px;font-weight:600;color:#888}
+
+.rr-player{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;transition:background .1s;border-bottom:1px solid #141414;user-select:none}
+.rr-player:last-child{border-bottom:none}
+.rr-player:hover{background:#141414}
+.rr-player.selected-win{background:#0a1f0c}
+.rr-player.selected-loss{background:#1a0808}
+.rr-player.pick-indicator{/* pick style */}
+.rr-star{font-size:10px;color:#d4a520;width:12px;flex-shrink:0}
+.rr-pname{flex:1;font-size:12px;font-weight:500;color:#ccc}
+.rr-player.selected-win .rr-pname{color:#5cb85c}
+.rr-player.selected-loss .rr-pname{color:#666}
+.rr-pname b{font-size:13px;color:#e8e8e0}
+.rr-r2{font-size:13px;font-weight:600;color:#e8e8e0;min-width:28px;text-align:right}
+.rr-r1ctx{font-size:10px;color:#333;margin-top:1px}
+.rr-result{font-size:10px;font-weight:700;letter-spacing:.08em;min-width:20px;text-align:center}
+.rr-result.w{color:#5cb85c}
+.rr-result.l{color:#e06060}
+
+.rr-hint{font-size:11px;color:#333;text-align:center;padding:10px;font-style:italic}
+
+/* R2 matchup table enhancements */
+.vs-row{display:flex;gap:6px;align-items:center}
+.vs-score{font-size:14px;font-weight:700}
+.vs-label{font-size:10px;color:#444;margin-top:1px}
+
+.err{background:#1a0808;border:1px solid #3a1515;border-radius:8px;padding:10px;font-size:11px;color:#e06060;margin-top:10px;display:none}
+.err.show{display:block}
+.dbg{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:8px;padding:12px;margin-top:14px;display:none}
+.dbg.show{display:block}
+.dbg pre{font-size:10px;color:#444;white-space:pre-wrap;word-break:break-all;max-height:180px;overflow:auto}
+
+@media(max-width:620px){
+  .g4{grid-template-columns:repeat(2,1fr)}
+  .rr-grid{grid-template-columns:1fr}
+  .rr-summary{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Masters 2026 — Bet Tracker</h1>
+<p class="sub">Live via Golf Leaderboard API · Round 2 in progress · Click players in RR to mark winners</p>
+
+<div class="bar">
+  <div class="status" id="status-msg"><b>R1 loaded</b> — press Go Live for R2 scores</div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span style="font-size:11px;color:#333" id="call-counter">0 / 250 calls</span>
+    <button class="btn" id="livebtn" onclick="goLive()">Go Live ↗</button>
+  </div>
+</div>
+
+<div class="g4">
+  <div class="mc"><div class="ml">Total Staked</div><div class="mv">$427.50</div></div>
+  <div class="mc"><div class="ml">Max Return</div><div class="mv">~$5,700</div><div class="ms">if all bets hit</div></div>
+  <div class="mc"><div class="ml">Last Updated</div><div class="mv" id="last-upd" style="font-size:13px;padding-top:6px">—</div></div>
+  <div class="mc"><div class="ml">RR Parlays Alive</div><div class="mv" id="rr-alive-hdr">560 / 560</div><div class="ms" id="rr-guaranteed-hdr">$0.00 locked in</div></div>
+</div>
+
+<div class="tabs">
+  <button class="tab on" onclick="sw('t')">Tournament (19)</button>
+  <button class="tab" onclick="sw('r')">R2 Live (5)</button>
+  <button class="tab" onclick="sw('p')">Top 40 Parlay</button>
+  <button class="tab" onclick="sw('rr')">Round Robin (560)</button>
+</div>
+
+<!-- TOURNAMENT TAB -->
+<div id="pnl-t" class="pnl on">
+  <div class="sh">Outright Winners</div>
+  <table>
+    <thead><tr><th style="width:26%">Player</th><th style="width:8%">Book</th><th style="width:9%">Odds</th><th style="width:7%">Stake</th><th style="width:9%">Payout</th><th style="width:19%">Score / Pos</th><th>Status</th></tr></thead>
+    <tbody id="tbl-outrights"></tbody>
+  </table>
+  <div class="sh">Win Markets</div>
+  <table>
+    <thead><tr><th style="width:26%">Player</th><th style="width:18%">Market</th><th style="width:9%">Odds</th><th style="width:7%">Stake</th><th style="width:9%">Payout</th><th style="width:19%">Score / Pos</th><th>Status</th></tr></thead>
+    <tbody id="tbl-markets"></tbody>
+  </table>
+</div>
+
+<!-- R2 LIVE TAB -->
+<div id="pnl-r" class="pnl">
+  <div class="sh">R2 Stroke Total</div>
+  <table>
+    <thead><tr><th style="width:22%">Player</th><th style="width:20%">Market</th><th style="width:9%">Odds</th><th style="width:8%">Stake</th><th style="width:9%">Payout</th><th style="width:14%">R2 Score</th><th>Status</th></tr></thead>
+    <tbody id="tbl-strokes"></tbody>
+  </table>
+  <div class="sh">R2 Head-to-Head Matchups</div>
+  <table>
+    <thead><tr><th style="width:22%">Pick</th><th style="width:9%">Odds</th><th style="width:8%">Stake</th><th style="width:9%">Payout</th><th style="width:18%">Pick R2</th><th style="width:18%">Opp R2</th><th>Status</th></tr></thead>
+    <tbody id="tbl-matchups"></tbody>
+  </table>
+</div>
+
+<!-- TOP 40 PARLAY TAB -->
+<div id="pnl-p" class="pnl">
+  <div class="dnote" id="parlay-note">FanDuel · 12-leg parlay · $5 stake · Payout $354.97 · All 12 must finish top 40 incl. ties</div>
+  <table>
+    <thead><tr><th style="width:36%">Player</th><th style="width:22%">Score / Pos</th><th style="width:16%">Leg Odds</th><th>Status</th></tr></thead>
+    <tbody id="tbl-top40"></tbody>
+  </table>
+</div>
+
+<!-- ROUND ROBIN TAB -->
+<div id="pnl-rr" class="pnl">
+  <div class="wnote">16 picks · C(16,3) = 560 three-leg parlays · $56 total · $0.10 / parlay · Click a player in each group to mark winner — ★ = your pick</div>
+
+  <div class="rr-summary">
+    <div class="rrs"><div class="rrs-lbl">Picks Won</div><div class="rrs-val" id="rrs-won">0 / 16</div></div>
+    <div class="rrs"><div class="rrs-lbl">Parlays Alive</div><div class="rrs-val amber" id="rrs-alive">560 / 560</div></div>
+    <div class="rrs"><div class="rrs-lbl">Guaranteed</div><div class="rrs-val green" id="rrs-guaranteed">$0.00</div></div>
+    <div class="rrs"><div class="rrs-lbl">Max Remaining</div><div class="rrs-val" id="rrs-maxrem">~$1,070</div></div>
+  </div>
+  <div class="rr-actions"><button class="btn-lite" type="button" onclick="clearRR()">Clear RR Picks</button></div>
+  <div class="wnote" id="rr-breakdown">No RR groups settled yet. Mark winners to calculate the exact 3-leg parlay results.</div>
+
+  <div class="rr-grid" id="rr-grid"></div>
+  <div class="rr-hint">Tap any player to mark as the R2 group winner · Tap again to clear</div>
+</div>
+
+<div class="err" id="err-box"></div>
+<div class="dbg" id="dbg-box"><div style="font-size:10px;color:#333;margin-bottom:6px">API Debug</div><pre id="dbg-pre"></pre></div>
+</div>
+
+<script>
+const LOCAL_PROXY = 'http://127.0.0.1:3000';
+const API_BASE = location.protocol === 'file:' ? LOCAL_PROXY : '';
+const MASTERS_API_PATH = '/api/masters';
+const MIN_REFRESH_MS = 60 * 1000;
+let callCount = 0, lastFetchAt = 0;
+let liveData = {};
+
+// ── BET DATA ──────────────────────────────────────────────────────────────────
+const OUTRIGHTS = [
+  {player:'Patrick Reed',     book:'DK',      odds:'+3900', stake:5,    payout:200,   market:'win'},
+  {player:'Scottie Scheffler',book:'BetMGM',  odds:'+7220', stake:5,    payout:361,   market:'win_parlay', note:'Parlay: Twins ✓  Michigan ✓'},
+  {player:'Xander Schauffele',book:'BetMGM',  odds:'+1400', stake:20,   payout:300,   market:'win'},
+  {player:'Xander Schauffele',book:'DK',      odds:'+1550', stake:15,   payout:247.5, market:'win'},
+  {player:'Jordan Spieth',    book:'BetMGM',  odds:'+4000', stake:5,    payout:200,   market:'win', note:'BetMGM bonus'},
+  {player:'Jordan Spieth',    book:'Fanatics',odds:'+2200', stake:5,    payout:115,   market:'win'},
+  {player:'Jordan Spieth',    book:'Fanatics',odds:'+2500', stake:2.5,  payout:65,    market:'win'},
+  {player:'Jordan Spieth',    book:'Fanatics',odds:'+5000', stake:6,    payout:300,   market:'win', note:'Fanatics bonus'},
+  {player:'Cameron Young',    book:'DK',      odds:'+2100', stake:10,   payout:220,   market:'win'},
+  {player:'Harris English',   book:'DK',      odds:'+20000',stake:1,    payout:201,   market:'win'},
+  {player:'Russell Henley',   book:'DK',      odds:'+33500',stake:2,    payout:672,   market:'win_parlay', note:'Parlay: Morez ✓'},
+  {player:'Matt Fitzpatrick', book:'DK',      odds:'+2150', stake:10,   payout:225,   market:'win'},
+  {player:'Si Woo Kim',       book:'BetMGM',  odds:'+5000', stake:5,    payout:250,   market:'win', note:'BetMGM bonus'},
+  {player:'Robert MacIntyre', book:'DK',      odds:'+3500', stake:5,    payout:180,   market:'win', note:'King of Course token'},
+];
+const MARKETS = [
+  {player:'Xander Schauffele',label:'Top 10',         odds:'+122', stake:20, payout:44.4,  market:'top10'},
+  {player:'Xander Schauffele',label:'Win w/o Scheffler',odds:'+996',stake:20, payout:219.2,market:'wws'},
+  {player:'Jordan Spieth',    label:'Top 20',         odds:'+138', stake:20, payout:47.6,  market:'top20'},
+  {player:'Jordan Spieth',    label:'Top 10',         odds:'+215', stake:20, payout:63,    market:'top10'},
+  {player:'Cameron Young',    label:'Top 10',         odds:'+162', stake:20, payout:52.4,  market:'top10'},
+];
+const STROKES = [
+  {player:'Ryan Gerard',      line:73.5, over:true, odds:'-112', stake:40, payout:75.71},
+  {player:'Kristoffer Reitan',line:73.5, over:true, odds:'-132', stake:50, payout:87.87},
+];
+const MATCHUPS = [
+  {player:'Casey Jarvis',   opp:'Kristoffer Reitan', odds:'-116', stake:25, payout:46.55},
+  {player:'Nick Taylor',    opp:'Ryan Gerard',       odds:'-112', stake:25, payout:47.32},
+  {player:'Keegan Bradley', opp:'Ryan Gerard',       odds:'-114', stake:30, payout:56.31},
+];
+const TOP40 = [
+  {player:'Patrick Reed',    odds:'-294'},{player:'Jacob Bridgeman',odds:'-197'},
+  {player:'Jordan Spieth',   odds:'-259'},{player:'Brooks Koepka',  odds:'-259'},
+  {player:'Max Homa',        odds:'-129'},{player:'Adam Scott',     odds:'-197'},
+  {player:'Russell Henley',  odds:'-259'},{player:'Jake Knapp',     odds:'-233'},
+  {player:'Si Woo Kim',      odds:'-250'},{player:'Marco Penge',    odds:'-197'},
+  {player:'Patrick Cantlay', odds:'-233'},{player:'Jon Rahm',       odds:'-740'},
+];
+const RR = [
+  {pick:'Jon Rahm',         opp:['Ludvig Åberg','Chris Gotterup'],           odds:'+105', dec:2.05},
+  {pick:'Sepp Straka',      opp:['Ben Griffin','Justin Thomas'],             odds:'+176', dec:2.76},
+  {pick:'Harris English',   opp:['Si Woo Kim','Marco Penge'],                odds:'+184', dec:2.84},
+  {pick:'Scottie Scheffler',opp:['Robert MacIntyre','Gary Woodland'],        odds:'-130', dec:1.769},
+  {pick:'Aldrich Potgieter',opp:['J.M. Olazábal','R. Neergaard-Petersen'],  odds:'+158', dec:2.58},
+  {pick:'Rasmus Hojgaard',  opp:['Vijay Singh','Denny McCarthy'],            odds:'+110', dec:2.10},
+  {pick:'Max Greyserman',   opp:['Charl Schwartzel','Ryan Fox'],             odds:'+170', dec:2.70},
+  {pick:'Casey Jarvis',     opp:['Kurt Kitayama','Kristoffer Reitan'],       odds:'+198', dec:2.98},
+  {pick:'Jake Knapp',       opp:['Sam Burns','Cameron Smith'],               odds:'+168', dec:2.68},
+  {pick:'Keegan Bradley',   opp:['Ryan Gerard','Nick Taylor'],               odds:'+175', dec:2.75},
+  {pick:'Dustin Johnson',   opp:['Shane Lowry','Jason Day'],                 odds:'+260', dec:3.60},
+  {pick:'Patrick Reed',     opp:['Tommy Fleetwood','Akshay Bhatia'],         odds:'+196', dec:2.96},
+  {pick:'Matt Fitzpatrick', opp:['Bryson DeChambeau','Xander Schauffele'],   odds:'+205', dec:3.05},
+  {pick:'Cameron Young',    opp:['Rory McIlroy','Mason Howell'],             odds:'+134', dec:2.34},
+  {pick:'Russell Henley',   opp:['Hideki Matsuyama','Collin Morikawa'],      odds:'+196', dec:2.96},
+  {pick:'Patrick Cantlay',  opp:['Viktor Hovland','Alex Noren'],             odds:'+164', dec:2.64},
+];
+
+// RR state: null=pending, 0=pick won, 1=opp1 won, 2=opp2 won
+const rrSel = new Array(16).fill(null);
+
+// ── UTILITIES ─────────────────────────────────────────────────────────────────
+function normName(n){
+  if(!n) return '';
+  const parts=n.trim().replace(/[^a-zA-Z\s]/g,'').split(/\s+/).filter(p=>p.length>1&&!/^[A-Z]$/.test(p));
+  return (parts[parts.length-1]||'').toLowerCase();
+}
+function getD(name){return liveData[normName(name)]||null;}
+function badge(c,l){return `<span class="b ${c}">${l}</span>`;}
+function numPos(v){
+  if(v===null||v===undefined||v==='') return 999;
+  if(typeof v==='number') return v;
+  const m=String(v).match(/\d+/);
+  return m?parseInt(m[0],10):999;
+}
+function fmtPar(v){
+  if(v===null||v===undefined||v==='') return 'â€”';
+  const n=Number(v);
+  if(!Number.isFinite(n)) return String(v);
+  return n===0?'E':n>0?'+'+n:''+n;
+}
+function fmtThru(holes,status){
+  if(status==='notstarted'||!holes) return '';
+  return Number(holes)===18?'F':holes;
+}
+function getR2State(name){
+  const d=getD(name);
+  if(!d) return null;
+  if(Number.isFinite(Number(d.r2))&&Number(d.r2)>0){
+    const s=Number(d.r2);
+    return {complete:true,strokes:s,toPar:Number(d.r2ToPar),thru:d.thru,text:String(s),cls:s<72?'sg':s>74?'sd':'se'};
+  }
+  if(d.r2ToPar===null||d.r2ToPar===undefined||d.r2ToPar==='') return null;
+  const tp=Number(d.r2ToPar);
+  if(!Number.isFinite(tp)) return null;
+  return {complete:false,strokes:null,toPar:tp,thru:d.thru,text:`${fmtPar(tp)}${d.thru?` Â· ${d.thru}`:''}`,cls:tp<0?'sg':tp>0?'sd':'se'};
+}
+function setCounter(limit,remaining){
+  const lim=Number(limit)||250;
+  const rem=Number(remaining);
+  if(Number.isFinite(rem)){
+    callCount=Math.max(lim-rem,0);
+    document.getElementById('call-counter').textContent=`${callCount} / ${lim} calls`;
+    return;
+  }
+  callCount++;
+  document.getElementById('call-counter').textContent=`${callCount} / ${lim} calls`;
+}
+
+function fmtTotal(d){
+  if(!d) return '<span style="color:#222">—</span>';
+  const s=d.total_to_par,p=d.position||'?';
+  const sc=s===0?'E':s>0?'+'+s:''+s;
+  const thru=d.thru?'·'+d.thru:'';
+  const cls=s<0?'sg':s>3?'sd':s>0?'sw':'se';
+  return `<span class="${cls}">${sc} · ${p}${thru}</span>`;
+}
+
+function fmtR2(name){
+  const state=getR2State(name);
+  if(!d||!d.r2) return '<span style="color:#333">R2 —</span>';
+  const s=parseInt(d.r2);
+  const cls=s<72?'sg':s>74?'sd':'se';
+  return `<span class="${cls}" style="font-size:14px;font-weight:700">${s}</span>`;
+}
+
+function winSt(pos,market){
+  if(!pos) return badge('bi','Pending');
+  const p=parseInt(pos.position)||999;
+  if(market==='win'||market==='win_parlay'){
+    if(p<=5) return badge('bs','Strong');
+    if(p<=20) return badge('bw','Alive');
+    if(p<=40) return badge('bw','Long Shot');
+    return badge('bd','In Danger');
+  }
+  if(market==='top10'){if(p<=5)return badge('bs','On Track');if(p<=14)return badge('bw','Needs Work');return badge('bd','In Danger');}
+  if(market==='top20'){if(p<=12)return badge('bs','On Track');if(p<=24)return badge('bw','Borderline');return badge('bd','In Danger');}
+  if(market==='wws'){if(p===1)return badge('bs','Leading');if(p<=5)return badge('bw','Alive');if(p<=20)return badge('bw','Needs Work');return badge('bd','In Danger');}
+  if(market==='top40'){if(p<=25)return badge('bs','On Track');if(p<=46)return badge('bw','Borderline');return badge('bd','In Danger');}
+  return badge('bi','Live');
+}
+
+function strokeSt(player,line,over){
+  const d=getD(player);
+  if(!d||!d.r2) return badge('bi','R2 Live');
+  const s=parseInt(d.r2);
+  if(over) return s>line ? badge('bs','Over ✓  '+s) : badge('bd','Under ✗  '+s);
+  return s<line ? badge('bs','Under ✓  '+s) : badge('bd','Over ✗  '+s);
+}
+
+function matchupSt(pick,opp){
+  const dp=getD(pick),do_=getD(opp);
+  if(!dp?.r2||!do_?.r2) return badge('bi','R2 Live');
+  const sp=parseInt(dp.r2),so=parseInt(do_.r2);
+  if(sp<so) return badge('bs','Winning ✓  '+sp+' vs '+so);
+  if(sp>so) return badge('bd','Losing ✗  '+sp+' vs '+so);
+  return badge('bw','Tied '+sp);
+}
+
+// ── RENDER TABS ───────────────────────────────────────────────────────────────
+function renderTournament(){
+  document.getElementById('tbl-outrights').innerHTML=OUTRIGHTS.map(b=>{
+    const pos=getD(b.player);
+    const st=b.market==='win_parlay'?badge('bp','Parlay Alive'):winSt(pos,b.market);
+    return `<tr>
+      <td><div class="nm">${b.player}</div>${b.note?`<div class="nt">${b.note}</div>`:''}</td>
+      <td style="color:#444">${b.book}</td><td style="color:#555">${b.odds}</td>
+      <td class="se">$${b.stake}</td><td class="pay">$${b.payout}</td>
+      <td>${fmtTotal(pos)}</td><td>${st}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tbl-markets').innerHTML=MARKETS.map(b=>{
+    const pos=getD(b.player);
+    return `<tr>
+      <td><div class="nm">${b.player}</div></td>
+      <td style="color:#444">${b.label}</td><td style="color:#555">${b.odds}</td>
+      <td class="se">$${b.stake}</td><td class="pay">$${b.payout}</td>
+      <td>${fmtTotal(pos)}</td><td>${winSt(pos,b.market)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderR2(){
+  document.getElementById('tbl-strokes').innerHTML=STROKES.map(b=>{
+    const d=getD(b.player);
+    return `<tr>
+      <td><div class="nm">${b.player}</div></td>
+      <td style="color:#444">Over ${b.line} R2</td><td style="color:#555">${b.odds}</td>
+      <td class="se">$${b.stake}</td><td class="pay">$${b.payout}</td>
+      <td>${fmtR2(b.player)}</td><td>${strokeSt(b.player,b.line,b.over)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tbl-matchups').innerHTML=MATCHUPS.map(b=>{
+    return `<tr>
+      <td><div class="nm">${b.player}</div><div class="nt">vs ${b.opp}</div></td>
+      <td style="color:#555">${b.odds}</td>
+      <td class="se">$${b.stake}</td><td class="pay">$${b.payout}</td>
+      <td>${fmtR2(b.player)}</td>
+      <td>${fmtR2(b.opp)}</td>
+      <td>${matchupSt(b.player,b.opp)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderTop40(){
+  let dead=false;
+  document.getElementById('tbl-top40').innerHTML=TOP40.map(b=>{
+    const pos=getD(b.player);
+    const st=winSt(pos,'top40');
+    if(pos&&parseInt(pos.position)>50) dead=true;
+    return `<tr>
+      <td><div class="nm">${b.player}</div></td>
+      <td>${fmtTotal(pos)}</td>
+      <td style="color:#444">${b.odds}</td>
+      <td>${st}</td>
+    </tr>`;
+  }).join('');
+  const el=document.getElementById('parlay-note');
+  if(dead){el.className='dnote';el.textContent='⚠ FanDuel · $5 → $354.97 · One or more players in serious danger of missing the cut — parlay at risk';}
+}
+
+// ── ROUND ROBIN ───────────────────────────────────────────────────────────────
+function calcRR(){
+  const odds=RR.map(r=>r.dec);
+  let alive=0,won=0,guaranteed=0,maxRem=0;
+  const res=rrSel.map(s=>s===null?'P':s===0?'W':'L');
+  for(let i=0;i<16;i++) for(let j=i+1;j<16;j++) for(let k=j+1;k<16;k++){
+    if(res[i]==='L'||res[j]==='L'||res[k]==='L') continue;
+    alive++;
+    const pay=0.10*odds[i]*odds[j]*odds[k];
+    if(res[i]==='W'&&res[j]==='W'&&res[k]==='W'){won++;guaranteed+=pay;}
+    else maxRem+=pay;
+  }
+  return {alive,won,guaranteed,maxRem};
+}
+
+function updateRRHeader(){
+  const {alive,won,guaranteed,maxRem}=calcRR();
+  const wonCount=rrSel.filter(s=>s===0).length;
+  const lostCount=rrSel.filter(s=>s!==null&&s!==0).length;
+  document.getElementById('rrs-won').textContent=wonCount+' / 16';
+  document.getElementById('rrs-alive').textContent=alive+' / 560';
+  document.getElementById('rrs-guaranteed').textContent='$'+guaranteed.toFixed(2);
+  document.getElementById('rrs-maxrem').textContent='$'+(guaranteed+maxRem).toFixed(2);
+  document.getElementById('rr-alive-hdr').textContent=alive+' / 560';
+  document.getElementById('rr-guaranteed-hdr').textContent='$'+guaranteed.toFixed(2)+' locked in';
+  const aliveEl=document.getElementById('rrs-alive');
+  aliveEl.className='rrs-val '+(alive>400?'amber':alive>100?'':'red');
+}
+
+function renderRR(){
+  const grid=document.getElementById('rr-grid');
+  grid.innerHTML=RR.map((r,gi)=>{
+    const sel=rrSel[gi]; // null, 0, 1, or 2
+    const cardCls=sel===0?'rrc won':sel!==null?'rrc lost':'rrc';
+    const players=[r.pick,...r.opp];
+    const rows=players.map((pname,pi)=>{
+      const d=getD(pname);
+      const r2=d?.r2?`<span class="${parseInt(d.r2)<72?'sg':parseInt(d.r2)>74?'sd':'se'}" style="font-size:14px;font-weight:700">${d.r2}</span>`:'<span style="color:#2a2a2a">—</span>';
+      const r1Ctx=d?.total_to_par!==undefined?(d.total_to_par===0?'E':d.total_to_par>0?'+'+d.total_to_par:''+d.total_to_par)+' R1':'';
+      const isSel=sel===pi;
+      const rowCls=isSel?(pi===0?'rr-player selected-win':'rr-player selected-loss'):'rr-player';
+      const star=pi===0?'<span class="rr-star">★</span>':'<span class="rr-star"></span>';
+      const resultMark=isSel?(pi===0?'<span class="rr-result w">W</span>':'<span class="rr-result l">L</span>'):'<span class="rr-result"></span>';
+      return `<div class="${rowCls}" onclick="pickRR(${gi},${pi})">
+        ${star}
+        <div class="rr-pname">${pi===0?`<b>${pname}</b>`:pname}</div>
+        <div style="text-align:right">
+          <div>${r2}</div>
+          <div class="rr-r1ctx">${r1Ctx}</div>
+        </div>
+        ${resultMark}
+      </div>`;
+    }).join('');
+    return `<div class="${cardCls}">
+      <div class="rrc-head">
+        <span class="rrc-title">Group ${gi+1} · 3-Ball</span>
+        <span class="rrc-odds">${r.odds}</span>
+      </div>
+      ${rows}
+    </div>`;
+  }).join('');
+  updateRRHeader();
+}
+
+function pickRR(gi,pi){
+  // Toggle: click same player = clear, click different = set
+  rrSel[gi]=(rrSel[gi]===pi)?null:pi;
+  renderRR();
+}
+
+// ── API ────────────────────────────────────────────────────────────────────────
+async function apiGet(path){
+  callCount++;
+  document.getElementById('call-counter').textContent=callCount+' / 250 calls';
+  const r=await fetch('https://'+HOST+path,{method:'GET',headers:{'x-rapidapi-host':HOST,'x-rapidapi-key':KEY}});
+  const txt=await r.text();
+  const dbg=document.getElementById('dbg-box');dbg.classList.add('show');
+  try{document.getElementById('dbg-pre').textContent='GET '+path+'\n'+JSON.stringify(JSON.parse(txt),null,2).slice(0,3000);}
+  catch(e){document.getElementById('dbg-pre').textContent='GET '+path+'\n'+txt.slice(0,3000);}
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return JSON.parse(txt);
+}
+
+async function goLive(){
+  const btn=document.getElementById('livebtn');
+  btn.disabled=true;
+  document.getElementById('err-box').classList.remove('show');
+  try{
+    if(!masterId){
+      setStatus('Finding Masters fixture...');
+      let tourIds=[1,2,3,4,5,6];
+      try{const t=await apiGet('/tours');const tl=(t.results?.tours||t.tours||[]);if(tl.length) tourIds=tl.map(x=>x.id||x.tour_id).filter(Boolean);}catch(e){}
+      for(const tid of tourIds){
+        try{
+          setStatus(`Checking tour ${tid}...`);
+          const d=await apiGet('/fixtures/'+tid);
+          const fx=(d.results?.fixtures||d.results?.tournaments||d.fixtures||d.tournaments||[]);
+          const m=fx.find(f=>/(masters|augusta)/i.test((f.name||'')+(f.short_name||'')+(f.tournament_name||'')));
+          if(m){masterId=m.id||m.tournament_id||m.fixture_id;break;}
+        }catch(e){continue;}
+      }
+    }
+    if(!masterId) throw new Error('Could not find Masters fixture — see debug panel below for tour/fixture IDs and let me know.');
+    setStatus('Fetching leaderboard...');
+    const d=await apiGet('/leaderboard/'+masterId);
+    const board=(d.results?.leaderboard||d.leaderboard||d.players||[]);
+    if(!board.length) throw new Error('Empty leaderboard — check debug panel for response shape.');
+    board.forEach(p=>{
+      const name=p.name||p.player_name||p.full_name||'';
+      if(!name) return;
+      const key=normName(name);
+      // Extract R2 specifically
+      const rounds=p.rounds||[];
+      const r1=rounds.find(r=>r.round_number===1||r.round===1)?.strokes||rounds[0]?.strokes||null;
+      const r2=rounds.find(r=>r.round_number===2||r.round===2)?.strokes||rounds[1]?.strokes||null;
+      liveData[key]={
+        position:p.position||p.pos||'?',
+        total_to_par:p.total_to_par!==undefined?p.total_to_par:p.score,
+        thru:p.thru||p.holes_played||'',
+        r1, r2, name
+      };
+    });
+    renderAll();
+    const now=new Date().toLocaleTimeString();
+    setStatus(`<b>Live</b> · Updated ${now}`);
+    document.getElementById('last-upd').textContent=now;
+  }catch(e){
+    document.getElementById('err-box').textContent='Error: '+e.message;
+    document.getElementById('err-box').classList.add('show');
+    setStatus('Failed — see error below');
+  }
+  btn.disabled=false;
+}
+
+function setStatus(html){document.getElementById('status-msg').innerHTML=html;}
+function renderAll(){renderTournament();renderR2();renderTop40();renderRR();}
+function sw(id){
+  var ids=['t','r','p','rr'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',ids[i]===id));
+  document.querySelectorAll('.pnl').forEach(p=>p.classList.remove('on'));
+  document.getElementById('pnl-'+id).classList.add('on');
+}
+
+// ── SEED R1 DATA ───────────────────────────────────────────────────────────────
+document.querySelector('.sub').innerHTML='Live via local RapidAPI proxy. Run <code>node server.js</code>, then click Go Live.';
+document.getElementById('status-msg').innerHTML='<b>R1 loaded</b> - start <code>node server.js</code>, then press Go Live for Masters data';
+document.getElementById('call-counter').textContent='quota pending';
+
+function fmtPar(v){
+  if(v===null||v===undefined||v==='') return '--';
+  const n=Number(v);
+  if(!Number.isFinite(n)) return String(v);
+  return n===0?'E':n>0?'+'+n:''+n;
+}
+
+function getR2State(name){
+  const d=getD(name);
+  if(!d) return null;
+  if(Number.isFinite(Number(d.r2))&&Number(d.r2)>0){
+    const s=Number(d.r2);
+    return {complete:true,strokes:s,toPar:Number(d.r2ToPar),thru:d.thru,text:String(s),cls:s<72?'sg':s>74?'sd':'se'};
+  }
+  if(d.r2ToPar===null||d.r2ToPar===undefined||d.r2ToPar==='') return null;
+  const tp=Number(d.r2ToPar);
+  if(!Number.isFinite(tp)) return null;
+  return {complete:false,strokes:null,toPar:tp,thru:d.thru,text:`${fmtPar(tp)}${d.thru?` | ${d.thru}`:''}`,cls:tp<0?'sg':tp>0?'sd':'se'};
+}
+
+function fmtR2(name){
+  const state=getR2State(name);
+  if(!state) return '<span style="color:#333">R2 --</span>';
+  return `<span class="${state.cls}" style="font-size:14px;font-weight:700">${state.text}</span>`;
+}
+
+function winSt(pos,market){
+  if(!pos) return badge('bi','Pending');
+  const p=numPos(pos.position);
+  if(market==='win'||market==='win_parlay'){
+    if(p<=5) return badge('bs','Strong');
+    if(p<=20) return badge('bw','Alive');
+    if(p<=40) return badge('bw','Long Shot');
+    return badge('bd','In Danger');
+  }
+  if(market==='top10'){if(p<=5)return badge('bs','On Track');if(p<=14)return badge('bw','Needs Work');return badge('bd','In Danger');}
+  if(market==='top20'){if(p<=12)return badge('bs','On Track');if(p<=24)return badge('bw','Borderline');return badge('bd','In Danger');}
+  if(market==='wws'){if(p===1)return badge('bs','Leading');if(p<=5)return badge('bw','Alive');if(p<=20)return badge('bw','Needs Work');return badge('bd','In Danger');}
+  if(market==='top40'){if(p<=25)return badge('bs','On Track');if(p<=46)return badge('bw','Borderline');return badge('bd','In Danger');}
+  return badge('bi','Live');
+}
+
+function strokeSt(player,line,over){
+  const state=getR2State(player);
+  if(!state) return badge('bi','R2 Live');
+  if(!state.complete) return badge('bi',`Thru ${state.thru||'Live'}`);
+  const s=state.strokes;
+  if(over) return s>line ? badge('bs','Over '+s) : badge('bd','Under '+s);
+  return s<line ? badge('bs','Under '+s) : badge('bd','Over '+s);
+}
+
+function matchupSt(pick,opp){
+  const sp=getR2State(pick),so=getR2State(opp);
+  if(!sp||!so) return badge('bi','R2 Live');
+  if(sp.complete&&so.complete){
+    if(sp.strokes<so.strokes) return badge('bs','Winning '+sp.strokes+' vs '+so.strokes);
+    if(sp.strokes>so.strokes) return badge('bd','Losing '+sp.strokes+' vs '+so.strokes);
+    return badge('bw','Tied '+sp.strokes);
+  }
+  if(sp.toPar<so.toPar) return badge('bs','Winning '+fmtPar(sp.toPar)+' vs '+fmtPar(so.toPar));
+  if(sp.toPar>so.toPar) return badge('bd','Losing '+fmtPar(sp.toPar)+' vs '+fmtPar(so.toPar));
+  return badge('bw','Tied '+fmtPar(sp.toPar));
+}
+
+function renderTop40(){
+  let dead=false;
+  document.getElementById('tbl-top40').innerHTML=TOP40.map(b=>{
+    const pos=getD(b.player);
+    const st=winSt(pos,'top40');
+    if(pos&&numPos(pos.position)>50) dead=true;
+    return `<tr>
+      <td><div class="nm">${b.player}</div></td>
+      <td>${fmtTotal(pos)}</td>
+      <td style="color:#444">${b.odds}</td>
+      <td>${st}</td>
+    </tr>`;
+  }).join('');
+  const el=document.getElementById('parlay-note');
+  if(dead){el.className='dnote';el.textContent='FanDuel: $5 to $354.97. One or more players are in serious danger of missing the cut.';}
+}
+
+function renderRR(){
+  const grid=document.getElementById('rr-grid');
+  grid.innerHTML=RR.map((r,gi)=>{
+    const sel=rrSel[gi];
+    const cardCls=sel===0?'rrc won':sel!==null?'rrc lost':'rrc';
+    const players=[r.pick,...r.opp];
+    const rows=players.map((pname,pi)=>{
+      const d=getD(pname);
+      const r2State=getR2State(pname);
+      const r2=r2State?`<span class="${r2State.cls}" style="font-size:14px;font-weight:700">${r2State.text}</span>`:'<span style="color:#2a2a2a">-</span>';
+      const r1Ctx=d?.total_to_par!==undefined?(d.total_to_par===0?'E':d.total_to_par>0?'+'+d.total_to_par:''+d.total_to_par)+' R1':'';
+      const isSel=sel===pi;
+      const rowCls=isSel?(pi===0?'rr-player selected-win':'rr-player selected-loss'):'rr-player';
+      const star=pi===0?'<span class="rr-star">*</span>':'<span class="rr-star"></span>';
+      const resultMark=isSel?(pi===0?'<span class="rr-result w">W</span>':'<span class="rr-result l">L</span>'):'<span class="rr-result"></span>';
+      return `<div class="${rowCls}" onclick="pickRR(${gi},${pi})">
+        ${star}
+        <div class="rr-pname">${pi===0?`<b>${pname}</b>`:pname}</div>
+        <div style="text-align:right">
+          <div>${r2}</div>
+          <div class="rr-r1ctx">${r1Ctx}</div>
+        </div>
+        ${resultMark}
+      </div>`;
+    }).join('');
+    return `<div class="${cardCls}">
+      <div class="rrc-head">
+        <span class="rrc-title">Group ${gi+1} - 3-Ball</span>
+        <span class="rrc-odds">${r.odds}</span>
+      </div>
+      ${rows}
+    </div>`;
+  }).join('');
+  updateRRHeader();
+}
+
+async function apiGet(path){
+  let r;
+  try{
+    r=await fetch(API_BASE+path,{method:'GET',headers:{'Accept':'application/json'}});
+  }catch(err){
+    if(location.protocol==='file:'){
+      throw new Error('Local proxy not running. Start it with: node server.js');
+    }
+    throw err;
+  }
+  setCounter(r.headers.get('x-quota-limit'),r.headers.get('x-quota-remaining'));
+  const txt=await r.text();
+  const dbg=document.getElementById('dbg-box');dbg.classList.add('show');
+  try{document.getElementById('dbg-pre').textContent='GET '+(API_BASE+path)+'\n'+JSON.stringify(JSON.parse(txt),null,2).slice(0,3000);}
+  catch(e){document.getElementById('dbg-pre').textContent='GET '+(API_BASE+path)+'\n'+txt.slice(0,3000);}
+  if(!r.ok){
+    try{
+      const payload=JSON.parse(txt);
+      throw new Error(payload.error||('HTTP '+r.status));
+    }catch(_){
+      throw new Error('HTTP '+r.status);
+    }
+  }
+  return JSON.parse(txt);
+}
+
+async function goLive(){
+  const btn=document.getElementById('livebtn');
+  btn.disabled=true;
+  document.getElementById('err-box').classList.remove('show');
+  try{
+    if(lastFetchAt&&Date.now()-lastFetchAt<MIN_REFRESH_MS){
+      const wait=Math.ceil((MIN_REFRESH_MS-(Date.now()-lastFetchAt))/1000);
+      setStatus(`<b>Live</b> - using cached pull to save requests (${wait}s cooldown)`);
+      return;
+    }
+    setStatus('Fetching Masters leaderboard...');
+    const d=await apiGet(MASTERS_API_PATH);
+    const tournament=d.results?.tournament||d.tournament||null;
+    const board=(d.results?.leaderboard||d.leaderboard||d.players||[]);
+    if(!board.length) throw new Error('Empty leaderboard - check the debug panel for the response shape.');
+    board.forEach(p=>{
+      const name=[p.first_name,p.last_name].filter(Boolean).join(' ')||p.name||p.player_name||p.full_name||'';
+      if(!name) return;
+      const key=normName(name);
+      const rounds=p.rounds||[];
+      const r1Round=rounds.find(r=>r.round_number===1||r.round===1)||rounds[0]||null;
+      const r2Round=rounds.find(r=>r.round_number===2||r.round===2)||rounds[1]||null;
+      const r1=r1Round?.strokes||null;
+      const r2=(Number(p.holes_played)===18||Number(r2Round?.strokes)>0)?Number(r2Round?.strokes)||null:null;
+      liveData[key]={
+        position:p.position??p.pos??'?',
+        total_to_par:p.total_to_par!==undefined?Number(p.total_to_par):p.score,
+        thru:fmtThru(p.holes_played||p.thru,p.status),
+        r1,
+        r2,
+        r2ToPar:r2Round?.total_to_par!==undefined?Number(r2Round.total_to_par):null,
+        name,
+        status:p.status||''
+      };
+    });
+    renderAll();
+    lastFetchAt=Date.now();
+    const updated=tournament?.live_details?.updated?new Date(tournament.live_details.updated).toLocaleTimeString():new Date().toLocaleTimeString();
+    setStatus(`<b>Live</b> - Masters ${tournament?.live_details?.status||'live'} - Updated ${updated}`);
+    document.getElementById('last-upd').textContent=updated;
+  }catch(e){
+    document.getElementById('err-box').textContent='Error: '+e.message;
+    document.getElementById('err-box').classList.add('show');
+    setStatus('Failed - see error below');
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+const themeOverride=document.createElement('style');
+themeOverride.textContent=`
+body{background:radial-gradient(circle at top left,rgba(212,172,58,.18),transparent 28%),radial-gradient(circle at top right,rgba(34,103,57,.12),transparent 30%),linear-gradient(180deg,#fbfdf8 0%,#f1f7eb 55%,#e8f0df 100%);color:#173421}
+.wrap{max-width:1040px}
+h1{color:#1e6039;font-size:30px}
+.sub,.status,.ms,.nt,.rr-r1ctx,.dbg pre{color:#5d6f5a}
+.bar,.mc,.rrs,.rrc,.dnote,.wnote,.err,.dbg,table{background:#fffdf8;border-color:#d8e4cf;box-shadow:0 14px 34px rgba(30,96,57,.1)}
+.bar,.mc,.rrs,.rrc,.dnote,.wnote,.err,.dbg,table{border-radius:18px}
+.tabs{background:transparent;border:none;padding:0}
+.tab{border-radius:999px;border:1px solid #cfdbc5;background:#f9fcf5;color:#1e6039;font-weight:700;padding:8px 16px}
+.tab.on{background:linear-gradient(135deg,#f6e9aa,#fffdf3);border-color:#d4ac3a;color:#755b0c}
+.btn{background:linear-gradient(135deg,#1f5f39,#2f7c4b);color:#fff;border-radius:999px;padding:9px 18px;box-shadow:0 10px 24px rgba(31,95,57,.22)}
+.quota,#call-counter{background:#eef6e8;border:1px solid #d8e4cf;color:#1f5f39;padding:7px 12px;border-radius:999px;font-weight:700}
+th{background:linear-gradient(180deg,#f8fbf4,#edf5e7);color:#1e6039;border-bottom-color:#d8e4cf}
+td{background:rgba(255,253,248,.95);color:#173421;border-bottom-color:#ecf2e8}
+tr:hover td{background:#fbfdf7}
+.nm,.mv,.status b,.rrs-val{color:#1e6039}
+.b{border-radius:999px}
+.bs{background:#e7f5e9;color:#1e6039;border-color:#bdd6c0}
+.bw{background:#fff7d9;color:#84680f;border-color:#ead790}
+.bd{background:#fff0ea;color:#a34839;border-color:#efc8be}
+.bi{background:#edf4fb;color:#355a74;border-color:#cdddea}
+.bp{background:#f3efdb;color:#6c5a13;border-color:#ded38e}
+.pay,.sg{color:#1e6039}
+.sw{color:#8c6c11}
+.sd{color:#a34839}
+.dnote{background:#fff5ee;color:#a34839;border-color:#efcfc5}
+.wnote{background:#fffbee;color:#7a6212;border-color:#ead790}
+.rrc-head{background:linear-gradient(180deg,#f7fbf2,#eef6e7);border-bottom-color:#d8e4cf}
+.rrc-title{color:#1e6039}
+.rrc-odds{color:#84680f}
+.rr-player{border-bottom-color:#edf2e9}
+.rr-player:hover{background:#f8fbf4}
+.rr-player.selected-win{background:#edf7ee}
+.rr-player.selected-loss{background:#fff4ee}
+.rr-player.selected-loss .rr-pname{color:#8d3f34}
+.rr-player.selected-win .rr-pname{color:#1e6039}
+.rr-star{color:#d4ac3a}
+.combined-player summary{list-style:none;cursor:pointer;font-weight:700;color:#1e6039}
+.combined-player summary::-webkit-details-marker{display:none}
+.combined-player details[open] summary{margin-bottom:6px}
+.bet-lines{margin-top:6px}
+.bet-line{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:#5d6f5a;padding:3px 0}
+.rr-actions{display:flex;justify-content:flex-end;margin:8px 0 12px}
+.btn-lite{border:1px solid #cfdbc5;background:#fffdf8;color:#1e6039;border-radius:999px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.btn-lite:hover{background:#f6faef}
+.dbg{display:none!important}
+@media(max-width:620px){body{padding:16px 12px 28px}}
+`;
+document.head.appendChild(themeOverride);
+
+const PLAYER_ALIASES={
+  'j m olazabal':'olazabal',
+  'jm olazabal':'olazabal',
+  'jose maria olazabal':'olazabal',
+  'r neergaard petersen':'neergaard petersen',
+  'rasmus neergaard petersen':'neergaard petersen',
+  'ludvig aberg':'aberg',
+  'siwoo kim':'si woo kim',
+  'denny mccarty':'denny mccarthy'
+};
+let liveLookup=Object.create(null);
+
+function cleanName(name){
+  const normalized=String(name||'')
+    .replace(/[øØ]/g,'o')
+    .replace(/[åÅ]/g,'a')
+    .replace(/[æÆ]/g,'ae')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-zA-Z0-9]+/g,' ')
+    .trim()
+    .replace(/\s+/g,' ')
+    .toLowerCase();
+  return PLAYER_ALIASES[normalized]||normalized;
+}
+
+function getNameKeys(name){
+  const base=cleanName(name);
+  const parts=base.split(' ').filter(Boolean);
+  const keys=new Set();
+  if(!parts.length) return [];
+  keys.add(base);
+  keys.add(parts[parts.length-1]);
+  if(parts.length>=2) keys.add(parts[0]+' '+parts[parts.length-1]);
+  if(parts.length>=2) keys.add(parts[0][0]+' '+parts.slice(1).join(' '));
+  if(parts.length>=3) keys.add(parts[0][0]+parts[1][0]+' '+parts.slice(2).join(' '));
+  return [...keys];
+}
+
+function registerPlayer(name,record){
+  const primary=cleanName(name);
+  if(!primary) return;
+  liveData[primary]=record;
+  getNameKeys(name).forEach(key=>{
+    if(!(key in liveLookup)) liveLookup[key]=primary;
+    else if(liveLookup[key]!==primary) liveLookup[key]=null;
+  });
+}
+
+function resetLiveMaps(){
+  liveData={};
+  liveLookup=Object.create(null);
+}
+
+function applySeedData(){
+  resetLiveMaps();
+  Object.entries(R1_SEED).forEach(([key,value])=>{
+    registerPlayer(key,{...value,name:key,thru:'',r1:null,r2:null,r2ToPar:null,status:'seed'});
+  });
+}
+
+function getD(name){
+  const keys=getNameKeys(name);
+  for(const key of keys){
+    if(liveData[key]) return liveData[key];
+    const primary=liveLookup[key];
+    if(primary&&liveData[primary]) return liveData[primary];
+  }
+  return null;
+}
+
+function buildRRTickets(){
+  const tickets=[];
+  for(let i=0;i<RR.length;i++){
+    for(let j=i+1;j<RR.length;j++){
+      for(let k=j+1;k<RR.length;k++){
+        const legs=[i,j,k];
+        const payout=0.10*RR[i].dec*RR[j].dec*RR[k].dec;
+        const states=legs.map(idx=>rrSel[idx]===null?'pending':rrSel[idx]===0?'win':'loss');
+        const status=states.includes('loss')?'dead':states.every(state=>state==='win')?'won':'alive';
+        tickets.push({legs,status,payout});
+      }
+    }
+  }
+  return tickets;
+}
+
+function calcRR(){
+  const tickets=buildRRTickets();
+  const wonTickets=tickets.filter(ticket=>ticket.status==='won');
+  const aliveTickets=tickets.filter(ticket=>ticket.status!=='dead');
+  const pendingTickets=tickets.filter(ticket=>ticket.status==='alive');
+  const guaranteed=wonTickets.reduce((sum,ticket)=>sum+ticket.payout,0);
+  const pendingReturn=pendingTickets.reduce((sum,ticket)=>sum+ticket.payout,0);
+  return {
+    tickets,
+    wonTickets,
+    aliveTickets,
+    pendingTickets,
+    won:wonTickets.length,
+    alive:aliveTickets.length,
+    guaranteed,
+    pendingReturn,
+    maxRem:guaranteed+pendingReturn
+  };
+}
+
+function updateRRHeader(){
+  const summary=calcRR();
+  const pickWins=rrSel.filter(sel=>sel===0).length;
+  const picksSettled=rrSel.filter(sel=>sel!==null).length;
+  document.getElementById('rrs-won').textContent=`${pickWins} / 16`;
+  document.getElementById('rrs-alive').textContent=`${summary.alive} / 560`;
+  document.getElementById('rrs-guaranteed').textContent=`$${summary.guaranteed.toFixed(2)}`;
+  document.getElementById('rrs-maxrem').textContent=`$${summary.maxRem.toFixed(2)}`;
+  document.getElementById('rr-alive-hdr').textContent=`${summary.alive} / 560`;
+  document.getElementById('rr-guaranteed-hdr').textContent=`$${summary.guaranteed.toFixed(2)} locked in`;
+  const aliveEl=document.getElementById('rrs-alive');
+  aliveEl.className='rrs-val '+(summary.alive>400?'amber':summary.alive>100?'':'red');
+  const breakdown=document.getElementById('rr-breakdown');
+  breakdown.textContent=
+    `Settled groups: ${picksSettled}/16. Won parlays: ${summary.wonTickets.length}. `+
+    `Alive parlays: ${summary.pendingTickets.length}. `+
+    `Exact won return: $${summary.guaranteed.toFixed(2)}. `+
+    `If every remaining live leg wins, total return becomes $${summary.maxRem.toFixed(2)}.`;
+}
+
+async function goLive(){
+  const btn=document.getElementById('livebtn');
+  btn.disabled=true;
+  document.getElementById('err-box').classList.remove('show');
+  try{
+    if(lastFetchAt&&Date.now()-lastFetchAt<MIN_REFRESH_MS){
+      const wait=Math.ceil((MIN_REFRESH_MS-(Date.now()-lastFetchAt))/1000);
+      setStatus(`<b>Live</b> - using cached pull to save requests (${wait}s cooldown)`);
+      return;
+    }
+    setStatus('Fetching Masters leaderboard...');
+    const d=await apiGet(MASTERS_API_PATH);
+    const tournament=d.results?.tournament||d.tournament||null;
+    const board=(d.results?.leaderboard||d.leaderboard||d.players||[]);
+    if(!board.length) throw new Error('Empty leaderboard - check the debug panel for the response shape.');
+    applySeedData();
+    board.forEach(p=>{
+      const name=[p.first_name,p.last_name].filter(Boolean).join(' ')||p.name||p.player_name||p.full_name||'';
+      if(!name) return;
+      const rounds=p.rounds||[];
+      const r1Round=rounds.find(r=>r.round_number===1||r.round===1)||rounds[0]||null;
+      const r2Round=rounds.find(r=>r.round_number===2||r.round===2)||rounds[1]||null;
+      const currentRound=Number(p.current_round||0);
+      const holesPlayed=Number(p.holes_played||0);
+      const round2Started=currentRound>2||(currentRound===2&&(holesPlayed>0||Number(r2Round?.strokes)>0||p.status==='active'));
+      const round2Complete=currentRound>=2&&holesPlayed===18&&Number(r2Round?.strokes)>0;
+      registerPlayer(name,{
+        position:p.position??p.pos??'?',
+        total_to_par:p.total_to_par!==undefined?Number(p.total_to_par):p.score,
+        thru:currentRound===2?fmtThru(p.holes_played||p.thru,p.status):'',
+        r1:r1Round?.strokes?Number(r1Round.strokes):null,
+        r2:round2Complete?Number(r2Round.strokes):null,
+        r2ToPar:round2Started&&r2Round?.total_to_par!==undefined?Number(r2Round.total_to_par):null,
+        name,
+        status:p.status||''
+      });
+    });
+    renderAll();
+    lastFetchAt=Date.now();
+    const updated=tournament?.live_details?.updated?new Date(tournament.live_details.updated).toLocaleTimeString():new Date().toLocaleTimeString();
+    setStatus(`<b>Live</b> - Masters ${tournament?.live_details?.status||'live'} - Updated ${updated}`);
+    document.getElementById('last-upd').textContent=updated;
+  }catch(e){
+    document.getElementById('err-box').textContent='Error: '+e.message;
+    document.getElementById('err-box').classList.add('show');
+    setStatus('Failed - see error below');
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+const R1_SEED={
+  'reed':{position:'T3',total_to_par:-3},'scheffler':{position:'T6',total_to_par:-2},
+  'schauffele':{position:'T6',total_to_par:-2},'spieth':{position:'T17',total_to_par:0},
+  'young':{position:'T33',total_to_par:1},'english':{position:'T33',total_to_par:1},
+  'henley':{position:'T33',total_to_par:1},'fitzpatrick':{position:'T40',total_to_par:2},
+  'kim':{position:'T48',total_to_par:3},'macintyre':{position:'T82',total_to_par:8},
+  'bridgeman':{position:'T10',total_to_par:-1},'fleetwood':{position:'T10',total_to_par:-1},
+  'woodland':{position:'T10',total_to_par:-1},'koepka':{position:'T17',total_to_par:0},
+  'scott':{position:'T17',total_to_par:0},'homa':{position:'T17',total_to_par:0},
+  'bradley':{position:'T17',total_to_par:0},'gerard':{position:'T17',total_to_par:0},
+  'reitan':{position:'T17',total_to_par:0},'matsuyama':{position:'T17',total_to_par:0},
+  'taylor':{position:'T10',total_to_par:-1},'burns':{position:'T1',total_to_par:-5},
+  'mcilroy':{position:'T1',total_to_par:-5},'day':{position:'T3',total_to_par:-3},
+  'kitayama':{position:'T3',total_to_par:-3},'lowry':{position:'T6',total_to_par:-2},
+  'rose':{position:'T6',total_to_par:-2},'rahm':{position:'T73',total_to_par:6},
+  'cantlay':{position:'T65',total_to_par:5},'penge':{position:'T56',total_to_par:4},
+  'knapp':{position:'T33',total_to_par:1},'johnson':{position:'T33',total_to_par:1},
+  'jarvis':{position:'T65',total_to_par:5},'hovland':{position:'T48',total_to_par:3},
+  'noren':{position:'T65',total_to_par:5},'aberg':{position:'T40',total_to_par:2},
+  'morikawa':{position:'T40',total_to_par:2},'dechambeau':{position:'T56',total_to_par:4},
+  'smith':{position:'T40',total_to_par:2},'gotterup':{position:'T17',total_to_par:0},
+  'griffin':{position:'T17',total_to_par:0},'straka':{position:'T33',total_to_par:1},
+  'hojgaard':{position:'T73',total_to_par:6},'schwartzel':{position:'T48',total_to_par:3},
+  'fox':{position:'T65',total_to_par:5},'potgieter':{position:'T90',total_to_par:12},
+  'greyserman':{position:'T77',total_to_par:7},'thomas':{position:'T17',total_to_par:0},
+  'bhatia':{position:'T33',total_to_par:1},'singh':{position:'T77',total_to_par:7},
+  'mccarthy':{position:'T65',total_to_par:5},'mccarty':{position:'T65',total_to_par:5},'olazabal':{position:'T40',total_to_par:2},
+  'neergaard-petersen':{position:'T65',total_to_par:5},'howell':{position:'T65',total_to_par:5},
+};
+
+function showDebug(title,text){
+  const dbg=document.getElementById('dbg-box');
+  document.getElementById('dbg-pre').textContent=`${title}\n${text}`.slice(0,3000);
+  dbg.classList.add('show');
+}
+
+function fmtTotal(player){
+  if(!player) return '<span style="color:#9cb098">--</span>';
+  const score=fmtPar(player.total_to_par);
+  const thru=player.thru?`Thru ${player.thru}`:(player.status==='notstarted'?'Not started':'');
+  const pos=player.position||'?';
+  const cls=Number(player.total_to_par)<0?'sg':Number(player.total_to_par)>3?'sd':Number(player.total_to_par)>0?'sw':'se';
+  return `<span class="${cls}">${score}${thru?` | ${thru}`:''} | ${pos}</span>`;
+}
+
+function groupOutrights(){
+  const grouped=new Map();
+  OUTRIGHTS.forEach(bet=>{
+    if(!grouped.has(bet.player)) grouped.set(bet.player,[]);
+    grouped.get(bet.player).push(bet);
+  });
+  return [...grouped.entries()].map(([player,bets])=>({
+    player,
+    bets,
+    stake:bets.reduce((sum,bet)=>sum+Number(bet.stake||0),0),
+    payout:bets.reduce((sum,bet)=>sum+Number(bet.payout||0),0),
+    note:bets.map(bet=>bet.note).filter(Boolean).join(' | ')
+  }));
+}
+
+function renderTournament(){
+  document.getElementById('tbl-outrights').innerHTML=groupOutrights().map(group=>{
+    const pos=getD(group.player);
+    const st=group.bets.some(bet=>bet.market==='win_parlay')?badge('bp','Parlay Alive'):winSt(pos,'win');
+    const detailRows=group.bets.length>1?`<div class="bet-lines">${group.bets.map(bet=>`<div class="bet-line"><span>${bet.book}</span><span>${bet.odds}</span><span>$${bet.stake}</span><span>to win $${bet.payout}</span>${bet.note?`<span>${bet.note}</span>`:''}</div>`).join('')}</div>`:'';
+    const playerCell=group.bets.length>1
+      ? `<div class="combined-player"><details><summary>${group.player} (${group.bets.length} bets)</summary>${detailRows}${group.note?`<div class="nt">${group.note}</div>`:''}</details></div>`
+      : `<div class="nm">${group.player}</div>${group.note?`<div class="nt">${group.note}</div>`:''}`;
+    return `<tr>
+      <td>${playerCell}</td>
+      <td style="color:#5d6f5a">${group.bets.length>1?`${group.bets.length} slips`:group.bets[0].book}</td>
+      <td style="color:#5d6f5a">${group.bets.length>1?'Mixed':group.bets[0].odds}</td>
+      <td class="se">$${group.stake.toFixed(2).replace(/\.00$/,'')}</td>
+      <td class="pay">$${group.payout.toFixed(2).replace(/\.00$/,'')}</td>
+      <td>${fmtTotal(pos)}</td><td>${st}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tbl-markets').innerHTML=MARKETS.map(b=>{
+    const pos=getD(b.player);
+    return `<tr>
+      <td><div class="nm">${b.player}</div></td>
+      <td style="color:#5d6f5a">${b.label}</td><td style="color:#5d6f5a">${b.odds}</td>
+      <td class="se">$${b.stake}</td><td class="pay">$${b.payout}</td>
+      <td>${fmtTotal(pos)}</td><td>${winSt(pos,b.market)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function clearRR(){
+  rrSel.fill(null);
+  renderRR();
+}
+
+async function apiGet(path){
+  let r;
+  try{
+    r=await fetch(API_BASE+path,{method:'GET',headers:{'Accept':'application/json'}});
+  }catch(err){
+    if(location.protocol==='file:'){
+      throw new Error('Local proxy not running. Start it with: node server.js');
+    }
+    throw err;
+  }
+  setCounter(r.headers.get('x-quota-limit'),r.headers.get('x-quota-remaining'));
+  const txt=await r.text();
+  if(!r.ok){
+    showDebug('GET '+(API_BASE+path),txt);
+    try{
+      const payload=JSON.parse(txt);
+      throw new Error(payload.error||('HTTP '+r.status));
+    }catch(_){
+      throw new Error('HTTP '+r.status);
+    }
+  }
+  return JSON.parse(txt);
+}
+
+async function goLive(){
+  const btn=document.getElementById('livebtn');
+  btn.disabled=true;
+  document.getElementById('err-box').classList.remove('show');
+  document.getElementById('dbg-box').classList.remove('show');
+  try{
+    if(lastFetchAt&&Date.now()-lastFetchAt<MIN_REFRESH_MS){
+      const wait=Math.ceil((MIN_REFRESH_MS-(Date.now()-lastFetchAt))/1000);
+      setStatus(`<b>Live</b> - using cached pull to save requests (${wait}s cooldown)`);
+      return;
+    }
+    setStatus('Fetching Masters leaderboard...');
+    const d=await apiGet(MASTERS_API_PATH);
+    const tournament=d.results?.tournament||d.tournament||null;
+    const board=(d.results?.leaderboard||d.leaderboard||d.players||[]);
+    if(!board.length) throw new Error('Empty leaderboard - check the response payload.');
+    applySeedData();
+    board.forEach(p=>{
+      const name=[p.first_name,p.last_name].filter(Boolean).join(' ')||p.name||p.player_name||p.full_name||'';
+      if(!name) return;
+      const rounds=p.rounds||[];
+      const r1Round=rounds.find(r=>r.round_number===1||r.round===1)||rounds[0]||null;
+      const r2Round=rounds.find(r=>r.round_number===2||r.round===2)||rounds[1]||null;
+      const currentRound=Number(p.current_round||0);
+      const holesPlayed=Number(p.holes_played||0);
+      const round2Started=currentRound>2||(currentRound===2&&(holesPlayed>0||Number(r2Round?.strokes)>0||p.status==='active'||p.status==='notstarted'));
+      const round2Complete=currentRound>=2&&holesPlayed===18&&Number(r2Round?.strokes)>0;
+      registerPlayer(name,{
+        position:p.position??p.pos??'?',
+        total_to_par:p.total_to_par!==undefined?Number(p.total_to_par):p.score,
+        thru:currentRound===2?fmtThru(p.holes_played||p.thru,p.status):'',
+        r1:r1Round?.strokes?Number(r1Round.strokes):null,
+        r2:round2Complete?Number(r2Round.strokes):null,
+        r2ToPar:round2Started&&r2Round?.total_to_par!==undefined?Number(r2Round.total_to_par):null,
+        name,
+        status:p.status||''
+      });
+    });
+    renderAll();
+    lastFetchAt=Date.now();
+    const updated=tournament?.live_details?.updated?new Date(tournament.live_details.updated).toLocaleTimeString():new Date().toLocaleTimeString();
+    setStatus(`<b>Live</b> - Masters ${tournament?.live_details?.status||'live'} - Updated ${updated}`);
+    document.getElementById('last-upd').textContent=updated;
+  }catch(e){
+    document.getElementById('err-box').textContent='Error: '+e.message;
+    document.getElementById('err-box').classList.add('show');
+    setStatus('Failed - see error below');
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+applySeedData();
+renderAll();
+</script>
+</body>
+</html>

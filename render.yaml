@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: masters-tracker
+    runtime: node
+    rootDir: .
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: GOLF_RAPIDAPI_KEY
+        sync: false
+      - key: MASTERS_FIXTURE_ID
+        value: "837"
