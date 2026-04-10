@@ -1015,6 +1015,54 @@ const R1_SEED={
   'neergaard-petersen':{position:'T65',total_to_par:5},'howell':{position:'T65',total_to_par:5},
 };
 
+const mobileRRStyle=document.createElement('style');
+mobileRRStyle.textContent=`
+.rr-player.live-leader{background:#f7f8de;border-left:4px solid #d4ac3a}
+.rr-player.live-leader .rr-pname{color:#184f30}
+.rr-live-badge{font-size:9px;padding:3px 7px}
+.rr-pname-wrap{flex:1;min-width:0}
+.rr-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.rr-side-tags{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.rr-head-mobile{gap:10px}
+.rr-mobile-odds{font-size:12px;font-weight:700;color:#84680f;margin-top:4px}
+.rr-pickleader{white-space:nowrap}
+@media (max-width: 760px){
+  body{font-size:16px}
+  .wrap{max-width:100%}
+  .tabs{gap:6px}
+  .tab{font-size:13px;padding:10px 14px}
+  .bar{padding:14px 12px}
+  .status{font-size:14px;line-height:1.45}
+  .g4{grid-template-columns:1fr 1fr;gap:10px}
+  .mv{font-size:22px}
+  th{font-size:10px;padding:10px 8px}
+  td{font-size:13px;padding:11px 8px}
+  .rr-summary{grid-template-columns:1fr 1fr;gap:10px}
+  .rrs{padding:12px}
+  .rrs-val{font-size:22px}
+  .rr-grid{grid-template-columns:1fr!important;gap:12px}
+  .rrc{border-radius:16px}
+  .rrc-head{padding:12px}
+  .rr-player{padding:12px}
+  .rr-pname,.rr-pname b{font-size:14px}
+  .rr-r1ctx{font-size:11px}
+  .rr-result{font-size:10px;min-width:auto}
+  .rr-hint,.wnote,.dnote,#rr-breakdown{font-size:13px;line-height:1.5}
+  .btn-lite{padding:9px 12px;font-size:12px}
+}
+@media (max-width: 520px){
+  .g4{grid-template-columns:1fr}
+  .tabs{display:grid;grid-template-columns:1fr 1fr}
+  .tab{width:100%;text-align:center}
+  .rrc-head{align-items:flex-start;flex-direction:column}
+  .rr-pickleader{width:100%}
+  .rr-player{align-items:flex-start}
+  .rr-side{min-width:84px}
+}
+`;
+document.head.appendChild(mobileRRStyle);
+document.querySelector('.rr-hint').textContent='Tap a player to set the winner, or tap Pick Leader to auto-select the current leader for that 3-ball.';
+
 function showDebug(title,text){
   const dbg=document.getElementById('dbg-box');
   document.getElementById('dbg-pre').textContent=`${title}\n${text}`.slice(0,3000);
@@ -1076,6 +1124,84 @@ function renderTournament(){
 function clearRR(){
   rrSel.fill(null);
   renderRR();
+}
+
+function getGroupLeaderIndex(groupIndex){
+  const group=RR[groupIndex];
+  if(!group) return null;
+  const players=[group.pick,...group.opp];
+  const ranked=players.map((name,idx)=>{
+    const state=getR2State(name);
+    if(!state) return null;
+    const metric=state.complete?state.strokes:state.toPar;
+    if(metric===null||metric===undefined||Number.isNaN(Number(metric))) return null;
+    return {idx,state,metric:Number(metric),complete:state.complete};
+  }).filter(Boolean);
+  if(!ranked.length) return null;
+  ranked.sort((a,b)=>{
+    if(a.complete!==b.complete) return a.complete?1:-1;
+    return a.metric-b.metric;
+  });
+  if(ranked.length>1 && ranked[0].metric===ranked[1].metric) return null;
+  return ranked[0].idx;
+}
+
+function pickLeader(groupIndex){
+  const leaderIndex=getGroupLeaderIndex(groupIndex);
+  if(leaderIndex===null){
+    setStatus('<b>RR update</b> - no clear live leader yet for that 3-ball.');
+    return;
+  }
+  rrSel[groupIndex]=leaderIndex;
+  renderRR();
+}
+
+function renderRR(){
+  const grid=document.getElementById('rr-grid');
+  grid.innerHTML=RR.map((r,gi)=>{
+    const sel=rrSel[gi];
+    const cardCls=sel===0?'rrc won':sel!==null?'rrc lost':'rrc';
+    const leaderIndex=getGroupLeaderIndex(gi);
+    const players=[r.pick,...r.opp];
+    const rows=players.map((pname,pi)=>{
+      const d=getD(pname);
+      const r2State=getR2State(pname);
+      const r2=r2State?`<span class="${r2State.cls}" style="font-size:15px;font-weight:800">${r2State.text}</span>`:'<span style="color:#9cb098">--</span>';
+      const r1Ctx=d?.total_to_par!==undefined?`${fmtPar(d.total_to_par)} total`:'';
+      const isSel=sel===pi;
+      const isLeader=leaderIndex===pi;
+      const rowCls=[
+        'rr-player',
+        isSel?(pi===0?'selected-win':'selected-loss'):'',
+        isLeader?'live-leader':''
+      ].filter(Boolean).join(' ');
+      const star=pi===0?'<span class="rr-star">*</span>':'<span class="rr-star"></span>';
+      const resultMark=isSel?(pi===0?'<span class="rr-result w">WIN</span>':'<span class="rr-result l">LOSS</span>'):'<span class="rr-result"></span>';
+      const leaderTag=isLeader?'<span class="b bs rr-live-badge">Live Leader</span>':'';
+      return `<div class="${rowCls}" onclick="pickRR(${gi},${pi})">
+        ${star}
+        <div class="rr-pname-wrap">
+          <div class="rr-pname">${pi===0?`<b>${pname}</b>`:pname}</div>
+          <div class="rr-r1ctx">${r1Ctx}</div>
+        </div>
+        <div class="rr-side">
+          <div>${r2}</div>
+          <div class="rr-side-tags">${leaderTag}${resultMark}</div>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="${cardCls}">
+      <div class="rrc-head rr-head-mobile">
+        <div>
+          <div class="rrc-title">Group ${gi+1} - 3-Ball</div>
+          <div class="rr-mobile-odds">${r.odds}</div>
+        </div>
+        <button class="btn-lite rr-pickleader" type="button" onclick="event.stopPropagation();pickLeader(${gi})">Pick Leader</button>
+      </div>
+      ${rows}
+    </div>`;
+  }).join('');
+  updateRRHeader();
 }
 
 async function apiGet(path){
