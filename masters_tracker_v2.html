@@ -134,11 +134,12 @@ tr:hover td{background:#0d0d0d}
     <thead><tr><th style="width:26%">Player</th><th style="width:8%">Book</th><th style="width:9%">Odds</th><th style="width:7%">Stake</th><th style="width:9%">Payout</th><th style="width:19%">Score / Pos</th><th>Status</th></tr></thead>
     <tbody id="tbl-outrights"></tbody>
   </table>
-  <div class="sh">Win Markets</div>
+  <div class="sh">Finishing Position Markets</div>
   <table>
     <thead><tr><th style="width:26%">Player</th><th style="width:18%">Market</th><th style="width:9%">Odds</th><th style="width:7%">Stake</th><th style="width:9%">Payout</th><th style="width:19%">Score / Pos</th><th>Status</th></tr></thead>
     <tbody id="tbl-markets"></tbody>
   </table>
+  <div id="bonus-bets-container" style="display:none"></div>
 </div>
 
 <!-- R2 LIVE TAB -->
@@ -166,19 +167,19 @@ tr:hover td{background:#0d0d0d}
 
 <!-- ROUND ROBIN TAB -->
 <div id="pnl-rr" class="pnl">
-  <div class="wnote">16 picks · C(16,3) = 560 three-leg parlays · $56 total · $0.10 / parlay · Click a player in each group to mark winner — ★ = your pick</div>
+  <div class="wnote" id="rr-top-note">16 picks · 560 three-leg parlays · $56 total ($0.10/parlay) · ★ = your pick in each 3-ball</div>
 
   <div class="rr-summary">
     <div class="rrs"><div class="rrs-lbl">Picks Won</div><div class="rrs-val" id="rrs-won">0 / 16</div></div>
     <div class="rrs"><div class="rrs-lbl">Parlays Alive</div><div class="rrs-val amber" id="rrs-alive">560 / 560</div></div>
-    <div class="rrs"><div class="rrs-lbl">Guaranteed</div><div class="rrs-val green" id="rrs-guaranteed">$0.00</div></div>
-    <div class="rrs"><div class="rrs-lbl">Max Remaining</div><div class="rrs-val" id="rrs-maxrem">~$1,070</div></div>
+    <div class="rrs"><div class="rrs-lbl">Locked In</div><div class="rrs-val green" id="rrs-guaranteed">$0.00</div></div>
+    <div class="rrs"><div class="rrs-lbl">Max Return</div><div class="rrs-val" id="rrs-maxrem">~$1,070</div></div>
   </div>
-  <div class="rr-actions"><button class="btn-lite" type="button" onclick="clearRR()">Clear RR Picks</button></div>
-  <div class="wnote" id="rr-breakdown">No RR groups settled yet. Mark winners to calculate the exact 3-leg parlay results.</div>
+  <div class="rr-actions"><button class="btn-lite" type="button" onclick="clearRR()">Clear All Picks</button></div>
+  <div class="rr-breakdown-box" id="rr-breakdown">Tap a player in each group to mark the winner. Results update automatically.</div>
 
   <div class="rr-grid" id="rr-grid"></div>
-  <div class="rr-hint">Tap any player to mark as the R2 group winner · Tap again to clear</div>
+  <div class="rr-hint">Tap a player to set winner · Tap Pick Leader to auto-select the live leader</div>
 </div>
 
 <div class="err" id="err-box"></div>
@@ -212,7 +213,7 @@ const OUTRIGHTS = [
 ];
 const MARKETS = [
   {player:'Xander Schauffele',label:'Top 10',         odds:'+122', stake:20, payout:44.4,  market:'top10'},
-  {player:'Xander Schauffele',label:'Win w/o Scheffler',odds:'+996',stake:20, payout:219.2,market:'wws'},
+  {player:'Xander Schauffele',label:'Win w/o Scheffler',odds:'+996',stake:20, payout:219.2,market:'wws',book:'DK'},
   {player:'Jordan Spieth',    label:'Top 20',         odds:'+138', stake:20, payout:47.6,  market:'top20'},
   {player:'Jordan Spieth',    label:'Top 10',         odds:'+215', stake:20, payout:63,    market:'top10'},
   {player:'Cameron Young',    label:'Top 10',         odds:'+162', stake:20, payout:52.4,  market:'top10'},
@@ -880,15 +881,43 @@ function getD(name){
   return null;
 }
 
+// ── RR LOCK HELPERS ──────────────────────────────────────────────────────────
+function isPlayerComplete(name){
+  const d=getD(name);
+  return !!(d&&d.r2!==null&&d.r2!==undefined);
+}
+
+function isGroupComplete(gi){
+  const g=RR[gi];
+  if(!g) return false;
+  return [g.pick,...g.opp].every(name=>isPlayerComplete(name));
+}
+
+// Returns winner index (0/1/2) when group is fully complete with a clear winner,
+// null otherwise (incomplete or tied — manual override allowed).
+function getGroupLockedWinner(gi){
+  if(!isGroupComplete(gi)) return null;
+  return getGroupLeaderIndex(gi); // null if tied
+}
+
+// Effective selection: locked winner overrides manual pick
+function getEffectiveSel(){
+  return RR.map((_,gi)=>{
+    const locked=getGroupLockedWinner(gi);
+    return locked!==null?locked:rrSel[gi];
+  });
+}
+
 function buildRRTickets(){
+  const effSel=getEffectiveSel();
   const tickets=[];
   for(let i=0;i<RR.length;i++){
     for(let j=i+1;j<RR.length;j++){
       for(let k=j+1;k<RR.length;k++){
         const legs=[i,j,k];
         const payout=0.10*RR[i].dec*RR[j].dec*RR[k].dec;
-        const states=legs.map(idx=>rrSel[idx]===null?'pending':rrSel[idx]===0?'win':'loss');
-        const status=states.includes('loss')?'dead':states.every(state=>state==='win')?'won':'alive';
+        const states=legs.map(idx=>effSel[idx]===null?'pending':effSel[idx]===0?'win':'loss');
+        const status=states.includes('loss')?'dead':states.every(s=>s==='win')?'won':'alive';
         tickets.push({legs,status,payout});
       }
     }
@@ -918,8 +947,11 @@ function calcRR(){
 
 function updateRRHeader(){
   const summary=calcRR();
-  const pickWins=rrSel.filter(sel=>sel===0).length;
-  const picksSettled=rrSel.filter(sel=>sel!==null).length;
+  const effSel=getEffectiveSel();
+  const pickWins=effSel.filter(sel=>sel===0).length;
+  const pickLosses=effSel.filter(sel=>sel!==null&&sel!==0).length;
+  const picksSettled=pickWins+pickLosses;
+  const picksPending=16-picksSettled;
   document.getElementById('rrs-won').textContent=`${pickWins} / 16`;
   document.getElementById('rrs-alive').textContent=`${summary.alive} / 560`;
   document.getElementById('rrs-guaranteed').textContent=`$${summary.guaranteed.toFixed(2)}`;
@@ -929,11 +961,24 @@ function updateRRHeader(){
   const aliveEl=document.getElementById('rrs-alive');
   aliveEl.className='rrs-val '+(summary.alive>400?'amber':summary.alive>100?'':'red');
   const breakdown=document.getElementById('rr-breakdown');
-  breakdown.textContent=
-    `Settled groups: ${picksSettled}/16. Won parlays: ${summary.wonTickets.length}. `+
-    `Alive parlays: ${summary.pendingTickets.length}. `+
-    `Exact won return: $${summary.guaranteed.toFixed(2)}. `+
-    `If every remaining live leg wins, total return becomes $${summary.maxRem.toFixed(2)}.`;
+  if(!breakdown) return;
+  if(picksSettled===0){
+    breakdown.textContent='No groups settled yet — tap a player in each 3-ball to mark the winner.';
+    return;
+  }
+  const parts=[];
+  if(pickWins>0) parts.push(`${pickWins} pick${pickWins>1?'s':''} won`);
+  if(pickLosses>0) parts.push(`${pickLosses} lost`);
+  if(picksPending>0) parts.push(`${picksPending} still live`);
+  const deadCount=560-summary.alive;
+  let line=parts.join(' · ')+'. ';
+  if(summary.guaranteed>0) line+=`Locked in: $${summary.guaranteed.toFixed(2)}. `;
+  if(summary.pendingTickets.length>0) line+=`${summary.pendingTickets.length} parlays still alive — ceiling $${summary.maxRem.toFixed(2)}.`;
+  if(deadCount>0) line+=` (${deadCount} parlays eliminated)`;
+  breakdown.textContent=line;
+  // Update top note with live state
+  const topNote=document.getElementById('rr-top-note');
+  if(topNote) topNote.textContent=`16 picks · 560 three-leg parlays · $56 total · ${picksSettled}/16 groups settled · ★ = your pick`;
 }
 
 async function goLive(){
@@ -1158,6 +1203,7 @@ function getGroupLeaderIndex(groupIndex){
 }
 
 function pickLeader(groupIndex){
+  if(getGroupLockedWinner(groupIndex)!==null) return; // auto-locked, no override
   const leaderIndex=getGroupLeaderIndex(groupIndex);
   if(leaderIndex===null){
     setStatus('<b>RR update</b> - no clear live leader yet for that 3-ball.');
@@ -1167,29 +1213,53 @@ function pickLeader(groupIndex){
   renderRR();
 }
 
+function pickRR(gi,pi){
+  if(getGroupLockedWinner(gi)!==null) return; // group is done, result is final
+  rrSel[gi]=(rrSel[gi]===pi)?null:pi;
+  renderRR();
+}
+
 function renderRR(){
   const grid=document.getElementById('rr-grid');
   grid.innerHTML=RR.map((r,gi)=>{
-    const sel=rrSel[gi];
-    const cardCls=sel===0?'rrc won':sel!==null?'rrc lost':'rrc';
-    const leaderIndex=getGroupLeaderIndex(gi);
+    const lockedWinner=getGroupLockedWinner(gi);
+    const isLocked=lockedWinner!==null;
+    const sel=isLocked?lockedWinner:rrSel[gi]; // effective selection
+    const cardCls=[
+      'rrc',
+      sel===0?'won':sel!==null?'lost':'',
+      isLocked?'rrc-locked':''
+    ].filter(Boolean).join(' ');
+    const leaderIndex=isLocked?null:getGroupLeaderIndex(gi);
     const players=[r.pick,...r.opp];
     const rows=players.map((pname,pi)=>{
       const d=getD(pname);
       const r2State=getR2State(pname);
+      const done=isPlayerComplete(pname);
       const r2=r2State?`<span class="${r2State.cls}" style="font-size:15px;font-weight:800">${r2State.text}</span>`:'<span style="color:#9cb098">--</span>';
       const r1Ctx=d?.total_to_par!==undefined?`${fmtPar(d.total_to_par)} total`:'';
       const isSel=sel===pi;
-      const isLeader=leaderIndex===pi;
+      const isLeader=!isLocked&&leaderIndex===pi;
+      const isFinalWin=isLocked&&isSel;
+      const isFinalLoss=isLocked&&!isSel;
       const rowCls=[
         'rr-player',
+        isFinalWin?'rr-final-win':
+        isFinalLoss?'rr-final-loss':
+        done?'rr-done':
         isSel?(pi===0?'selected-win':'selected-loss'):'',
         isLeader?'live-leader':''
       ].filter(Boolean).join(' ');
-      const star=pi===0?'<span class="rr-star">*</span>':'<span class="rr-star"></span>';
-      const resultMark=isSel?(pi===0?'<span class="rr-result w">WIN</span>':'<span class="rr-result l">LOSS</span>'):'<span class="rr-result"></span>';
+      const clickAttr=isLocked?'':` onclick="pickRR(${gi},${pi})"`;
+      const star=pi===0?'<span class="rr-star">★</span>':'<span class="rr-star"></span>';
+      const resultMark=isFinalWin
+        ?`<span class="rr-result w">WIN</span>`
+        :isFinalLoss
+          ?'<span class="rr-result l" style="opacity:.5">—</span>'
+          :isSel?(pi===0?'<span class="rr-result w">WIN</span>':'<span class="rr-result l">LOSS</span>'):'<span class="rr-result"></span>';
       const leaderTag=isLeader?'<span class="b bs rr-live-badge">Live Leader</span>':'';
-      return `<div class="${rowCls}" onclick="pickRR(${gi},${pi})">
+      const doneTag=done&&!isLocked?'<span class="b bi rr-live-badge" style="font-size:9px">F</span>':'';
+      return `<div class="${rowCls}"${clickAttr}>
         ${star}
         <div class="rr-pname-wrap">
           <div class="rr-pname">${pi===0?`<b>${pname}</b>`:pname}</div>
@@ -1197,17 +1267,20 @@ function renderRR(){
         </div>
         <div class="rr-side">
           <div>${r2}</div>
-          <div class="rr-side-tags">${leaderTag}${resultMark}</div>
+          <div class="rr-side-tags">${leaderTag}${doneTag}${resultMark}</div>
         </div>
       </div>`;
     }).join('');
+    const headerRight=isLocked
+      ?`<span class="rr-locked-badge">🔒 Final</span>`
+      :`<button class="btn-lite rr-pickleader" type="button" onclick="event.stopPropagation();pickLeader(${gi})">Pick Leader</button>`;
     return `<div class="${cardCls}">
       <div class="rrc-head rr-head-mobile">
         <div>
-          <div class="rrc-title">Group ${gi+1} - 3-Ball</div>
+          <div class="rrc-title">Group ${gi+1} · 3-Ball</div>
           <div class="rr-mobile-odds">${r.odds}</div>
         </div>
-        <button class="btn-lite rr-pickleader" type="button" onclick="event.stopPropagation();pickLeader(${gi})">Pick Leader</button>
+        ${headerRight}
       </div>
       ${rows}
     </div>`;
@@ -1229,12 +1302,12 @@ async function apiGet(path){
   const txt=await r.text();
   if(!r.ok){
     showDebug('GET '+(API_BASE+path),txt);
+    let msg='HTTP '+r.status;
     try{
       const payload=JSON.parse(txt);
-      throw new Error(payload.error||('HTTP '+r.status));
-    }catch(_){
-      throw new Error('HTTP '+r.status);
-    }
+      if(payload?.error) msg=payload.error;
+    }catch(_){}
+    throw new Error(msg);
   }
   return JSON.parse(txt);
 }
@@ -1281,6 +1354,414 @@ async function goLive(){
     lastFetchAt=Date.now();
     const updated=tournament?.live_details?.updated?new Date(tournament.live_details.updated).toLocaleTimeString():new Date().toLocaleTimeString();
     setStatus(`<b>Live</b> - Masters ${tournament?.live_details?.status||'live'} - Updated ${updated}`);
+    document.getElementById('last-upd').textContent=updated;
+  }catch(e){
+    document.getElementById('err-box').textContent='Error: '+e.message;
+    document.getElementById('err-box').classList.add('show');
+    setStatus('Failed - see error below');
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+const liveMeta={status:'pre',currentRound:1,totalRounds:4,updated:''};
+
+[
+  {player:'Tommy Fleetwood',book:'DK',odds:'+990',stake:18.5,payout:183.5,market:'win',note:'DraftKings bonus bet',bonus:true},
+  {player:'Xander Schauffele',book:'DK',odds:'+700',stake:18.5,payout:129.5,market:'winner_without',label:'Winner w/o Scheffler/McIlroy',note:'DraftKings bonus bet',bonus:true,excluded:['Scottie Scheffler','Rory McIlroy']}
+].forEach(bet=>{
+  const exists=OUTRIGHTS.some(existing=>
+    existing.player===bet.player &&
+    existing.book===bet.book &&
+    existing.odds===bet.odds &&
+    existing.market===bet.market &&
+    (existing.label||'')===(bet.label||'')
+  );
+  if(!exists) OUTRIGHTS.push(bet);
+});
+
+OUTRIGHTS.forEach(bet=>{
+  if(/bonus|token/i.test(bet.note||'')) bet.bonus=true;
+  if(!bet.section) bet.section=bet.market==='winner_without'?'Winner Without Markets':'Outright Winners';
+});
+
+const uiEnhanceStyle=document.createElement('style');
+uiEnhanceStyle.textContent=`
+.section-row td{background:#f3f7ee!important;color:#1e6039!important;font-size:11px!important;font-weight:800!important;text-transform:uppercase;letter-spacing:.1em;border-top:1px solid #d8e4cf}
+.bonus-chip{display:inline-flex;align-items:center;gap:4px;background:#fff2c4;color:#6f5400;border:1px solid #e2c96d;border-radius:999px;padding:3px 10px;font-size:10px;font-weight:800;letter-spacing:.04em}
+.bonus-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:4px 0 16px}
+.bonus-card{background:linear-gradient(135deg,#fffef5,#fff8d6);border:1px solid #e2c96d;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;box-shadow:0 4px 14px rgba(180,140,0,.08)}
+.bonus-card-tag{display:flex;align-items:center;gap:6px;margin-bottom:2px}
+.bonus-card-label{font-size:10px;font-weight:800;color:#6f5400;text-transform:uppercase;letter-spacing:.08em}
+.bonus-card-player{font-size:15px;font-weight:800;color:#173421;line-height:1.2}
+.bonus-card-market{font-size:11px;color:#5d6f5a;margin-top:-2px}
+.bonus-card-meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:11px;color:#84680f;font-weight:600;margin-top:2px}
+.bonus-card-sep{color:#d8c48a}
+.bonus-card-return{font-size:12px;color:#1e6039;font-weight:700}
+.bonus-card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:4px;padding-top:8px;border-top:1px solid #ead790}
+.bonus-card-score{font-size:12px;color:#5d6f5a}
+.rr-breakdown-box{background:linear-gradient(135deg,#f7fbf2,#eef6e7);border:1px solid #d8e4cf;border-radius:10px;padding:10px 14px;font-size:12px;color:#1e6039;font-weight:600;margin:4px 0 14px;line-height:1.6}
+.rr-player.rr-done{opacity:.55;cursor:default}
+.rr-player.rr-final-win{background:#edf7ee!important;opacity:1;cursor:default}
+.rr-player.rr-final-win .rr-pname,.rr-player.rr-final-win .rr-pname b{color:#1e6039!important}
+.rr-player.rr-final-loss{opacity:.38;cursor:default}
+.rr-player.rr-final-loss .rr-pname,.rr-player.rr-final-loss .rr-pname b{color:#999!important;text-decoration:line-through}
+.rrc.rrc-locked{border-color:#bdd6c0}
+.rrc.rrc-locked.won{border-color:#1a4020}
+.rrc.rrc-locked.lost{border-color:#d8c4ba}
+.rr-locked-badge{font-size:10px;font-weight:800;color:#1e6039;background:#e7f5e9;border:1px solid #bdd6c0;border-radius:999px;padding:4px 10px;letter-spacing:.04em}
+@media(max-width:620px){.bonus-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:400px){.bonus-grid{grid-template-columns:1fr}}
+.stake-stack,.result-line{display:flex;flex-direction:column;gap:4px}
+.stake-stack .cash-line{font-weight:700;color:#173421}
+.detail-note{font-size:11px;color:#5d6f5a}
+.results-wrap{display:grid;gap:12px}
+.results-card{background:#fffdf8;border:1px solid #d8e4cf;border-radius:18px;box-shadow:0 14px 34px rgba(30,96,57,.08);padding:14px 16px}
+.results-card h3{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#1e6039;margin-bottom:10px}
+.results-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #edf2e9}
+.results-row:last-child{border-bottom:none}
+.results-name{font-weight:800;color:#173421}
+.results-meta{font-size:11px;color:#5d6f5a;margin-top:4px;line-height:1.45}
+.results-right{text-align:right;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.rr-breakdown-strong{font-weight:800;color:#1e6039}
+.rr-hint{font-style:normal;font-weight:600}
+.rrc-title{font-size:12px;font-weight:800}
+.rr-mobile-odds{font-size:13px;font-weight:800}
+@media (max-width: 640px){
+  .results-row{flex-direction:column;align-items:flex-start}
+  .results-right{text-align:left;align-items:flex-start}
+}
+`;
+document.head.appendChild(uiEnhanceStyle);
+
+const tabsEl=document.querySelector('.tabs');
+if(tabsEl && !document.getElementById('tab-res')){
+  const resultsTab=document.createElement('button');
+  resultsTab.className='tab';
+  resultsTab.id='tab-res';
+  resultsTab.textContent='Results';
+  resultsTab.onclick=()=>sw('res');
+  tabsEl.appendChild(resultsTab);
+}
+
+if(!document.getElementById('pnl-res')){
+  const resultsPanel=document.createElement('div');
+  resultsPanel.id='pnl-res';
+  resultsPanel.className='pnl';
+  resultsPanel.innerHTML=`
+    <div class="wnote" id="results-note">Results lock in automatically when Round 2 markets are finished or the tournament is completed.</div>
+    <div class="results-wrap" id="results-wrap"></div>
+  `;
+  document.getElementById('err-box').before(resultsPanel);
+}
+
+function isBonusBet(bet){
+  return Boolean(bet?.bonus || /bonus|token/i.test(bet?.note||''));
+}
+
+function fmtMoney(value){
+  return '$'+Number(value||0).toFixed(2).replace(/\.00$/,'');
+}
+
+function getAllUniquePlayers(){
+  const seen=new Set();
+  return Object.values(liveData).filter(player=>{
+    const key=(player?.name||'')+'|'+(player?.position||'');
+    if(!player?.name || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function isTournamentFinal(){
+  return liveMeta.status==='completed';
+}
+
+function finishPos(name){
+  const player=getD(name);
+  return player?numPos(player.position):999;
+}
+
+function getWinnerWithout(excluded=[]){
+  const excludedKeys=new Set(excluded.map(name=>cleanName(name)));
+  const pool=getAllUniquePlayers()
+    .filter(player=>!excludedKeys.has(cleanName(player.name)))
+    .sort((a,b)=>{
+      const posDiff=numPos(a.position)-numPos(b.position);
+      if(posDiff!==0) return posDiff;
+      return Number(a.total_to_par)-Number(b.total_to_par);
+    });
+  return pool[0]||null;
+}
+
+function gradeTournamentBet(bet){
+  if(!isTournamentFinal()) return null;
+  if(bet.market==='win') return finishPos(bet.player)===1;
+  if(bet.market==='winner_without'){
+    const winner=getWinnerWithout(bet.excluded||[]);
+    return winner?cleanName(winner.name)===cleanName(bet.player):false;
+  }
+  if(bet.market==='top10') return finishPos(bet.player)<=10;
+  if(bet.market==='top20') return finishPos(bet.player)<=20;
+  if(bet.market==='top40') return finishPos(bet.player)<=40;
+  if(bet.market==='wws'){
+    const winner=getWinnerWithout(['Scottie Scheffler']);
+    return winner?cleanName(winner.name)===cleanName(bet.player):false;
+  }
+  return null;
+}
+
+function gradeR2StrokeBet(bet){
+  const state=getR2State(bet.player);
+  if(!state?.complete) return null;
+  return bet.over ? state.strokes>bet.line : state.strokes<bet.line;
+}
+
+function gradeMatchupBet(bet){
+  const pickState=getR2State(bet.player);
+  const oppState=getR2State(bet.opp);
+  if(!pickState?.complete || !oppState?.complete) return null;
+  if(pickState.strokes===oppState.strokes) return null;
+  return pickState.strokes<oppState.strokes;
+}
+
+function gradeBadge(result){
+  if(result===true) return badge('bs','Final Win');
+  if(result===false) return badge('bd','Final Loss');
+  return badge('bi','Live');
+}
+
+function updateHeaderStats(){
+  const cards=document.querySelectorAll('.g4 .mc');
+  if(cards.length<4) return;
+  const allStraight=[...OUTRIGHTS,...MARKETS,...STROKES,...MATCHUPS];
+  const cashStaked=allStraight.reduce((sum,bet)=>sum+(isBonusBet(bet)?0:Number(bet.stake||0)),0)+5+56;
+  const maxReturn=allStraight.reduce((sum,bet)=>sum+Number(bet.payout||0),0)+354.97+calcRR().maxRem;
+  cards[0].querySelector('.mv').textContent=fmtMoney(cashStaked);
+  cards[0].querySelector('.ms')?.remove();
+  const cashNote=document.createElement('div');
+  cashNote.className='ms';
+  cashNote.textContent='bonus bets excluded from stake';
+  cards[0].querySelector('.mv').after(cashNote);
+  cards[1].querySelector('.mv').textContent='~'+fmtMoney(maxReturn).replace('$','$');
+}
+
+function renderOutrightSectionRows(title,bets,isBonus=false){
+  const grouped=new Map();
+  bets.forEach(bet=>{
+    const key=[bet.player,bet.market,bet.label||''].join('|');
+    if(!grouped.has(key)) grouped.set(key,{player:bet.player,market:bet.market,label:bet.label||'',excluded:bet.excluded||[],bets:[]});
+    grouped.get(key).bets.push(bet);
+  });
+  const headerCls=isBonus?'bonus-section-row':'section-row';
+  const rows=[`<tr class="${headerCls}"><td colspan="7">${title}</td></tr>`];
+  grouped.forEach(group=>{
+    const playerData=getD(group.player);
+    const grade=gradeTournamentBet(group.bets[0]);
+    const allBonus=group.bets.every(isBonusBet);
+    const cashStake=group.bets.reduce((sum,bet)=>sum+(isBonusBet(bet)?0:Number(bet.stake||0)),0);
+    const totalPayout=group.bets.reduce((sum,bet)=>sum+Number(bet.payout||0),0);
+    const detailRows=group.bets.map(bet=>`
+      <div class="bet-line">
+        <span>${bet.book}</span>
+        <span>${bet.odds}</span>
+        <span>${isBonusBet(bet)?'<span class="bonus-chip">Bonus Bet</span>':fmtMoney(bet.stake)}</span>
+        <span>to return ${fmtMoney(bet.payout)}</span>
+        ${bet.note?`<span style="color:#5d6f5a">${bet.note}</span>`:''}
+      </div>
+    `).join('');
+    const playerCell=group.bets.length>1
+      ? `<div class="combined-player"><details><summary>${group.player}${group.label?` — ${group.label}`:''} (${group.bets.length} slips)</summary><div class="bet-lines">${detailRows}</div></details></div>`
+      : `<div class="nm">${group.player}</div>${group.label?`<div class="nt">${group.label}</div>`:''}${group.bets[0].note?`<div class="nt" style="color:#84680f">${group.bets[0].note}</div>`:''}`;
+    const stakeCell=allBonus
+      ? `<span class="bonus-chip">Bonus</span>`
+      : `<div class="stake-stack"><div class="cash-line">${fmtMoney(cashStake)}</div></div>`;
+    rows.push(`<tr class="${isBonus?'bonus-row':''}">
+      <td>${playerCell}</td>
+      <td style="color:#5d6f5a">${group.bets.length>1?`${group.bets.length} slips`:group.bets[0].book}</td>
+      <td style="color:#5d6f5a">${group.bets.length>1?'Mixed':group.bets[0].odds}</td>
+      <td>${stakeCell}</td>
+      <td class="pay">${fmtMoney(totalPayout)}</td>
+      <td>${fmtTotal(playerData)}</td>
+      <td>${gradeBadge(grade)}</td>
+    </tr>`);
+  });
+  return rows.join('');
+}
+
+function renderBonusCards(bets){
+  const container=document.getElementById('bonus-bets-container');
+  if(!container) return;
+  if(!bets.length){container.innerHTML='';return;}
+  container.innerHTML=`<div class="bonus-grid">${bets.map(bet=>{
+    const pos=getD(bet.player);
+    const grade=gradeTournamentBet(bet);
+    const marketLabel=bet.label||(bet.market==='winner_without'?'Winner Without':'Outright Win');
+    return `<div class="bonus-card">
+      <div class="bonus-card-tag"><span class="bonus-chip">🎁 Bonus Bet</span></div>
+      <div class="bonus-card-player">${bet.player}</div>
+      <div class="bonus-card-market">${marketLabel}</div>
+      <div class="bonus-card-meta">
+        <span>${bet.book}</span><span class="bonus-card-sep">·</span>
+        <span>${bet.odds}</span>
+      </div>
+      <div class="bonus-card-return">Returns ${fmtMoney(bet.payout)} if wins</div>
+      <div class="bonus-card-footer">
+        <div class="bonus-card-score">${fmtTotal(pos)}</div>
+        <div>${gradeBadge(grade)}</div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderTournament(){
+  const cashOutrights=OUTRIGHTS.filter(bet=>bet.market==='win'&&!isBonusBet(bet));
+  const bonusOutrights=OUTRIGHTS.filter(bet=>isBonusBet(bet)&&bet.market!=='winner_without');
+  const winnerWithout=[
+    ...OUTRIGHTS.filter(bet=>bet.market==='winner_without'),
+    ...MARKETS.filter(bet=>bet.market==='wws').map(bet=>({
+      ...bet,
+      market:'winner_without',
+      excluded:['Scottie Scheffler'],
+      label:bet.label||'Winner w/o Scheffler'
+    }))
+  ];
+  document.getElementById('tbl-outrights').innerHTML=
+    renderOutrightSectionRows('Outright Winners',cashOutrights,false)+
+    (winnerWithout.length?renderOutrightSectionRows('Winner Without Scheffler / McIlroy',winnerWithout,false):'')+
+    (bonusOutrights.length?renderOutrightSectionRows('Bonus Bets',bonusOutrights,true):'');
+  document.getElementById('tbl-markets').innerHTML=MARKETS.filter(bet=>bet.market!=='wws').map(bet=>{
+    const pos=getD(bet.player);
+    const grade=gradeTournamentBet(bet);
+    return `<tr>
+      <td><div class="nm">${bet.player}</div></td>
+      <td style="color:#5d6f5a">${bet.label}</td><td style="color:#5d6f5a">${bet.odds}</td>
+      <td><div class="stake-stack"><div class="cash-line">${fmtMoney(bet.stake)}</div></div></td>
+      <td class="pay">${fmtMoney(bet.payout)}</td>
+      <td>${fmtTotal(pos)}</td><td>${gradeBadge(grade===null?null:grade)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderResults(){
+  const wrap=document.getElementById('results-wrap');
+  if(!wrap) return;
+  const tournamentRows=[...OUTRIGHTS,...MARKETS].map(bet=>{
+    const result=gradeTournamentBet(bet);
+    return {
+      title:bet.label?`${bet.player} - ${bet.label}`:bet.player,
+      meta:`${bet.book} | ${bet.odds} | ${isBonusBet(bet)?'Bonus Bet':fmtMoney(bet.stake)+' cash stake'} | Return ${fmtMoney(bet.payout)}`,
+      badge:gradeBadge(result),
+      result
+    };
+  });
+  const round2Rows=[
+    ...STROKES.map(bet=>({
+      title:`${bet.player} ${bet.over?'Over':'Under'} ${bet.line} R2`,
+      meta:`${bet.odds} | ${fmtMoney(bet.stake)} cash stake | Return ${fmtMoney(bet.payout)}`,
+      badge:gradeBadge(gradeR2StrokeBet(bet))
+    })),
+    ...MATCHUPS.map(bet=>({
+      title:`${bet.player} vs ${bet.opp}`,
+      meta:`${bet.odds} | ${fmtMoney(bet.stake)} cash stake | Return ${fmtMoney(bet.payout)}`,
+      badge:gradeBadge(gradeMatchupBet(bet))
+    }))
+  ];
+  const rrSummary=calcRR();
+  wrap.innerHTML=`
+    <div class="results-card">
+      <h3>Tournament Markets</h3>
+      ${tournamentRows.map(row=>`<div class="results-row"><div><div class="results-name">${row.title}</div><div class="results-meta">${row.meta}</div></div><div class="results-right">${row.badge}</div></div>`).join('')}
+    </div>
+    <div class="results-card">
+      <h3>Round 2 Markets</h3>
+      ${round2Rows.map(row=>`<div class="results-row"><div><div class="results-name">${row.title}</div><div class="results-meta">${row.meta}</div></div><div class="results-right">${row.badge}</div></div>`).join('')}
+    </div>
+    <div class="results-card">
+      <h3>Round Robin Snapshot</h3>
+      <div class="results-row">
+        <div>
+          <div class="results-name">560 three-leg parlays</div>
+          <div class="results-meta">
+            <span class="rr-breakdown-strong">${rrSummary.wonTickets.length}</span> won,
+            <span class="rr-breakdown-strong">${rrSummary.pendingTickets.length}</span> still alive,
+            exact won return <span class="rr-breakdown-strong">${fmtMoney(rrSummary.guaranteed)}</span>.
+          </div>
+        </div>
+        <div class="results-right">${badge('bw',`Ceiling ${fmtMoney(rrSummary.maxRem)}`)}</div>
+      </div>
+    </div>
+  `;
+  const note=document.getElementById('results-note');
+  if(note){
+    note.textContent=isTournamentFinal()
+      ? 'Tournament final detected. Outright and finishing-position bets are now graded permanently.'
+      : 'Results lock automatically once Round 2 markets are completed or the tournament finishes.';
+  }
+}
+
+function renderAll(){
+  renderTournament();
+  renderR2();
+  renderTop40();
+  renderRR();
+  renderResults();
+  updateHeaderStats();
+}
+
+function sw(id){
+  const ids=['t','r','p','rr','res'];
+  document.querySelectorAll('.tab').forEach((tab,index)=>tab.classList.toggle('on',ids[index]===id));
+  document.querySelectorAll('.pnl').forEach(panel=>panel.classList.remove('on'));
+  document.getElementById('pnl-'+id).classList.add('on');
+}
+
+async function goLive(){
+  const btn=document.getElementById('livebtn');
+  btn.disabled=true;
+  document.getElementById('err-box').classList.remove('show');
+  document.getElementById('dbg-box').classList.remove('show');
+  try{
+    if(lastFetchAt&&Date.now()-lastFetchAt<MIN_REFRESH_MS){
+      const wait=Math.ceil((MIN_REFRESH_MS-(Date.now()-lastFetchAt))/1000);
+      setStatus(`<b>Live</b> - using cached pull to save requests (${wait}s cooldown)`);
+      return;
+    }
+    setStatus('Fetching Masters leaderboard...');
+    const d=await apiGet(MASTERS_API_PATH);
+    const tournament=d.results?.tournament||d.tournament||null;
+    liveMeta.status=tournament?.live_details?.status||'live';
+    liveMeta.currentRound=Number(tournament?.live_details?.current_round||0);
+    liveMeta.totalRounds=Number(tournament?.live_details?.total_rounds||4);
+    liveMeta.updated=tournament?.live_details?.updated||'';
+    const board=(d.results?.leaderboard||d.leaderboard||d.players||[]);
+    if(!board.length) throw new Error('Empty leaderboard - check the response payload.');
+    applySeedData();
+    board.forEach(p=>{
+      const name=[p.first_name,p.last_name].filter(Boolean).join(' ')||p.name||p.player_name||p.full_name||'';
+      if(!name) return;
+      const rounds=p.rounds||[];
+      const r1Round=rounds.find(r=>r.round_number===1||r.round===1)||rounds[0]||null;
+      const r2Round=rounds.find(r=>r.round_number===2||r.round===2)||rounds[1]||null;
+      const currentRound=Number(p.current_round||0);
+      const holesPlayed=Number(p.holes_played||0);
+      const round2Started=currentRound>2||(currentRound===2&&(holesPlayed>0||Number(r2Round?.strokes)>0||p.status==='active'||p.status==='notstarted'));
+      const round2Complete=currentRound>=2&&holesPlayed===18&&Number(r2Round?.strokes)>0;
+      registerPlayer(name,{
+        position:p.position??p.pos??'?',
+        total_to_par:p.total_to_par!==undefined?Number(p.total_to_par):p.score,
+        thru:currentRound===2?fmtThru(p.holes_played||p.thru,p.status):'',
+        r1:r1Round?.strokes?Number(r1Round.strokes):null,
+        r2:round2Complete?Number(r2Round.strokes):null,
+        r2ToPar:round2Started&&r2Round?.total_to_par!==undefined?Number(r2Round.total_to_par):null,
+        name,
+        status:p.status||''
+      });
+    });
+    renderAll();
+    lastFetchAt=Date.now();
+    const updated=liveMeta.updated?new Date(liveMeta.updated).toLocaleTimeString():new Date().toLocaleTimeString();
+    setStatus(`<b>Live</b> - Masters ${liveMeta.status} - Updated ${updated}`);
     document.getElementById('last-upd').textContent=updated;
   }catch(e){
     document.getElementById('err-box').textContent='Error: '+e.message;

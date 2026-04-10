@@ -5,7 +5,7 @@ const path = require('node:path');
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
 const RAPIDAPI_HOST = 'golf-leaderboard-data.p.rapidapi.com';
-const RAPIDAPI_KEY = process.env.GOLF_RAPIDAPI_KEY || '';
+const RAPIDAPI_KEY = process.env.GOLF_RAPIDAPI_KEY || 'ec9d618d2amshaeacc7b7ff7c423p1edb8bjsnd3df41f82fd5';
 const MASTERS_FIXTURE_ID = Number(process.env.MASTERS_FIXTURE_ID || 837);
 const HTML_PATH = path.join(__dirname, 'masters_tracker_v2.html');
 
